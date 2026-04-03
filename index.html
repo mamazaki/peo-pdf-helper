@@ -56,7 +56,6 @@
         @media (max-width: 768px) {
             body { padding: 10px; }
             .toolbar { padding: 15px; flex-direction: column; align-items: stretch; position: relative; top: 0; }
-            #btn-export, #btn-clear { flex: 1; }
             .btn-group-mobile { display: flex; gap: 10px; width: 100%; }
             #pdf-container { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
             .system-credit { text-align: center; }
@@ -71,13 +70,14 @@
 </div>
 
 <header class="system-header">
-    <img src="./img/logo.png" alt="UDONPEO Logo" class="system-logo"> <h1 class="system-title">Udon Thani Provincial Education Office PDF Helper</h1>
+    <img src="img/logo.png" alt="PEO Udon Logo" class="system-logo">
+    <h1 class="system-title">Udon Thani Provincial Education Office PDF Helper</h1>
 </header>
 
 <div class="toolbar">
     <div class="input-group">
         <label>➕ เพิ่มไฟล์ PDF:</label>
-        <input type="file" id="file-upload" accept="application/pdf">
+        <input type="file" id="file-upload" accept="application/pdf" multiple>
     </div>
 
     <div class="input-group">
@@ -88,17 +88,13 @@
     <div class="input-group" style="border-left: 2px solid #eee; padding-left: 15px;">
         <label>รูปแบบตัวเลข:</label>
         <div style="display:flex; gap:5px;">
-            <select id="num-type" style="width: 80px;">
+            <select id="num-type" style="width: 100px;" onchange="updateFormatOptions()">
                 <option value="arabic">อารบิก</option>
                 <option value="thai">เลขไทย</option>
+                <option value="thai-alpha">ก ข ค</option>
             </select>
             <select id="num-format">
-                <option value="- {n} -">- 1 -</option>
-                <option value="~ {n} ~">~ 1 ~</option>
-                <option value="[ {n} ]">[ 1 ]</option>
-                <option value="หน้า {n}">หน้า 1</option>
-                <option value="{n}">1 (ไม่มี)</option>
-            </select>
+                </select>
         </div>
     </div>
 
@@ -124,7 +120,6 @@
     </div>
 
     <div class="btn-group-mobile" style="display:flex; gap:10px; align-items: flex-end;">
-        <input type="hidden" id="start-page" value="1">
         <button id="btn-preview-toggle" class="btn" style="background:#6c757d; color:white;">👁️ ดูเลข</button>
         <button id="btn-clear" class="btn btn-danger">🗑️ ล้างทั้งหมด</button>
         <button id="btn-export" class="btn btn-success">💾 Download PDF</button>
@@ -145,7 +140,6 @@
 </div>
 
 <script>
-    // --- สคริปต์การทำงานทั้งหมดคงเดิม ยกเว้นส่วน Remember Me ที่เพิ่มเข้ามา ---
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
     const container = document.getElementById('pdf-container');
@@ -153,9 +147,9 @@
     const loading = document.getElementById('loading');
     let isPreviewOpen = false;
 
-    // --- LocalStorage Logic (จดจำค่าตั้งค่า) ---
+    // --- 1. Settings & LocalStorage ---
     const settingsFields = ['num-type', 'num-format', 'font-size', 'num-pos', 'offset-x', 'offset-y'];
-    
+
     function saveSettings() {
         const settings = {};
         settingsFields.forEach(id => settings[id] = document.getElementById(id).value);
@@ -167,15 +161,33 @@
         const saved = localStorage.getItem('peo_pdf_settings');
         if (saved) {
             const settings = JSON.parse(saved);
-            settingsFields.forEach(id => { if(settings[id] !== undefined) document.getElementById(id).value = settings[id]; });
+            settingsFields.forEach(id => {
+                const el = document.getElementById(id);
+                if(el && settings[id] !== undefined) el.value = settings[id];
+            });
         }
     }
 
-    // --- Initial Load ---
-    loadSettings();
-    settingsFields.forEach(id => document.getElementById(id).addEventListener('input', saveSettings));
+    function updateFormatOptions() {
+        const type = document.getElementById('num-type').value;
+        const formatSelect = document.getElementById('num-format');
+        const savedValue = JSON.parse(localStorage.getItem('peo_pdf_settings'))?.['num-format'];
+        
+        let placeholder = (type === 'thai') ? '๑' : (type === 'thai-alpha' ? 'ก' : '1');
+        
+        formatSelect.innerHTML = `
+            <option value="- {n} -">- ${placeholder} -</option>
+            <option value="~ {n} ~">~ ${placeholder} ~</option>
+            <option value="[ {n} ]">[ ${placeholder} ]</option>
+            <option value="หน้า {n}">หน้า ${placeholder}</option>
+            <option value="{n}">${placeholder} (ไม่มี)</option>
+        `;
+        
+        if (savedValue) formatSelect.value = savedValue;
+        saveSettings();
+    }
 
-    // --- ส่วนการทำงานอื่นๆ ของ PDF เหมือนเดิมทุกประการ ---
+    // --- 2. Core Logic ---
     const sortable = new Sortable(container, { 
         animation: 150,
         onEnd: () => { updateAllBadges(); if(isPreviewOpen) updatePreviewNumbers(); }
@@ -204,7 +216,6 @@
                 newCards.reverse().forEach(c => targetCard.after(c));
             }
         }
-
         updateAllBadges();
         loading.style.display = 'none';
         e.target.value = ''; 
@@ -228,14 +239,14 @@
                 <label class="toggle-print-label"><input type="checkbox" class="toggle-print" checked style="margin:0;"><span>🖨️ พิมพ์เลข</span></label>
                 <button type="button" onclick="rotateCard(this.closest('.page-card'))">🔄 หมุน</button>
                 <button type="button" onclick="zoomCard(this.closest('.page-card'))">🔍 ขยาย</button>
-                <button type="button" class="btn-danger" onclick="this.closest('.page-card').remove(); updateAllBadges();" style="grid-column: span 2; color:white; border:none;">🗑️ ลบหน้า</button>
+                <button type="button" class="btn-danger" onclick="this.closest('.page-card').remove(); updateAllBadges();" style="grid-column: span 2; color:white; border:none; margin-top:5px;">🗑️ ลบหน้า</button>
             </div>
         `;
         
-        card.querySelector('.toggle-print').addEventListener('change', (e) => {
-            const lbl = e.target.closest('label');
-            lbl.classList.toggle('disabled', !e.target.checked);
-            lbl.querySelector('span').innerText = e.target.checked ? '🖨️ พิมพ์เลข' : '🚫 ซ่อนเลข';
+        card.querySelector('.toggle-print').addEventListener('change', (ev) => {
+            const lbl = ev.target.closest('label');
+            lbl.classList.toggle('disabled', !ev.target.checked);
+            lbl.querySelector('span').innerText = ev.target.checked ? '🖨️ พิมพ์เลข' : '🚫 ซ่อนเลข';
             if(isPreviewOpen) updatePreviewNumbers();
         });
 
@@ -262,10 +273,14 @@
     }
 
     function getFormattedNumberText(num, type, format) {
-        let strNum = num.toString();
-        if (type === 'thai') {
+        let strNum = '';
+        if (type === 'arabic') strNum = num.toString();
+        else if (type === 'thai') {
             const thaiDigits = ['๐','๑','๒','๓','๔','๕','๖','๗','๘','๙'];
-            strNum = strNum.replace(/\d/g, d => thaiDigits[d]);
+            strNum = num.toString().replace(/\d/g, d => thaiDigits[d]);
+        } else if (type === 'thai-alpha') {
+            const alpha = ["ก","ข","ค","ฆ","ง","จ","ฉ","ช","ซ","ฌ","ญ","ฎ","ฏ","ฐ","ฑ","ฒ","ณ","ด","ต","ถ","ท","ธ","น","บ","ป","ผ","ฝ","พ","ฟ","ภ","ม","ย","ร","ล","ว","ศ","ษ","ส","ห","ฬ","อ","ฮ"];
+            strNum = alpha[(num - 1) % alpha.length];
         }
         return format.replace('{n}', strNum);
     }
@@ -335,10 +350,10 @@
             const fontBytes = await fetch('fonts/THSARABUNNEW.TTF').then(res => res.arrayBuffer());
             const font = await finalPdf.embedFont(fontBytes);
 
-            const posType = document.getElementById('num-pos').value;
-            const userFontSize = parseInt(document.getElementById('font-size').value) || 16;
             const type = document.getElementById('num-type').value;
             const format = document.getElementById('num-format').value;
+            const posType = document.getElementById('num-pos').value;
+            const userFontSize = parseInt(document.getElementById('font-size').value) || 16;
             const ox = parseInt(document.getElementById('offset-x').value) || 0;
             const oy = parseInt(document.getElementById('offset-y').value) || 0;
 
@@ -383,6 +398,16 @@
             link.click();
         } catch (err) { console.error(err); alert('เกิดข้อผิดพลาดในการบันทึกค่ะ'); }
         finally { loading.style.display = 'none'; }
+    };
+
+    // --- Init ---
+    window.onload = () => {
+        loadSettings();
+        updateFormatOptions();
+        settingsFields.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) el.addEventListener('input', saveSettings);
+        });
     };
 </script>
 </body>
