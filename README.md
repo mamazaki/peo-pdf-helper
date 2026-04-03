@@ -17,7 +17,7 @@
 ## 🚀 การติดตั้ง (Installation)
 1. **Clone Repository:**
 ```bash
-git clone [https://github.com/mamazaki/peo-pdf-helper.git](https://github.com/mamazaki/peo-pdf-helper.git)
+git clone https://github.com/mamazaki/peo-pdf-helper.git
 ```
 
 2. ตรวจสอบโครงสร้างโฟลเดอร์:
@@ -26,7 +26,7 @@ git clone [https://github.com/mamazaki/peo-pdf-helper.git](https://github.com/ma
 - โลโก้หน่วยงานต้องอยู่ที่ /img/logo.png
 - เปิดใช้งานผ่าน Web Server (Apache, Nginx หรือ GitHub Pages) เพื่อให้ระบบโหลดฟอนต์ผ่าน CORS ได้อย่างถูกต้อง
 
-🤝##  เครดิตและผู้พัฒนา (Credits)
+## 🤝 เครดิตและผู้พัฒนา (Credits)
 ออกแบบ และพัฒนาโดย นายสุทธิชัย ชมชื่น นักวิชาการคอมพิวเตอร์ชำนาญการ กลุ่มนโยบายและแผน สำนักงานศึกษาธิการจังหวัดอุดรธานี
 
 ### Powered by PDF-lib, PDF.js, and SortableJS
