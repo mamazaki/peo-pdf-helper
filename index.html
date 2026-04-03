@@ -29,7 +29,6 @@
         .system-logo { height: 40px; width: auto; object-fit: contain; }
         .system-title { font-size: 18px; font-weight: bold; color: var(--primary); margin: 0; }
         
-        /* ปรับ Toolbar ให้กะทัดรัดขึ้น */
         .toolbar { 
             background: var(--card-bg); padding: 12px 15px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); 
             margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; position: sticky; top: 15px; z-index: 100;
@@ -62,14 +61,20 @@
         .number-preview { 
             position: absolute; 
             color: #000000 !important; 
-            font-weight: bold; 
             background: rgba(255, 255, 255, 0.9) !important; 
             border: 1px dashed #000000 !important; 
-            padding: 2px 5px; 
+            padding: 2px 4px; 
+            font-size: 11px; 
             pointer-events: none; 
             display: none; 
             z-index: 20; 
             white-space: nowrap; 
+        }
+
+        #zoom-number-preview {
+            background: transparent !important;
+            border: 1px dashed rgba(0, 0, 0, 0.5) !important; 
+            padding: 0;
         }
 
         .page-info { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; z-index: 10; }
@@ -79,8 +84,8 @@
         .toggle-print-label.disabled { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
 
         #zoom-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
-        #zoom-content { background: var(--card-bg); padding: 10px; border-radius: 8px; position: relative; max-width: 95vw; max-height: 95vh; display: flex; flex-direction: column; border: 1px solid var(--border); }
-        .close-modal { position: absolute; top: -15px; right: -15px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+        #zoom-content { background: var(--card-bg); padding: 10px; border-radius: 8px; position: relative; max-width: 95vw; max-height: 95vh; display: flex; flex-direction: column; border: 1px solid var(--border); overflow: hidden; }
+        .close-modal { position: absolute; top: -15px; right: -15px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; z-index: 100; }
         #zoom-canvas { max-width: 100%; max-height: calc(95vh - 20px); object-fit: contain; }
         #loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); align-items: center; justify-content: center; z-index: 2000; flex-direction: column; }
 
@@ -102,7 +107,7 @@
 
 <header class="system-header">
     <img src="img/logo.png" alt="PEO Udon Logo" class="system-logo">
-    <h1 class="system-title">Udon Thani Provincial Education Office PDF Tools</h1>
+    <h1 class="system-title">Udon Thani Provincial Education Office PDF Helper</h1>
 </header>
 
 <div id="main-content">
@@ -133,21 +138,27 @@
         <div class="input-group" style="border-left: 1px solid var(--border); padding-left: 10px;">
             <label>รูปแบบตัวเลข:</label>
             <div style="display:flex; gap:4px;">
-                <select id="num-type" style="width: 80px;" onchange="updateFormatOptions()">
+                <select id="num-type" style="width: 100px;" onchange="updateFormatOptions()">
                     <option value="arabic">อารบิก</option>
-                    <option value="thai">เลขไทย</option>
+                    <option value="thai" selected>เลขไทย</option>
                     <option value="thai-alpha">ก ข ค</option>
                 </select>
-                <select id="num-format" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();"></select>
+                <select id="num-format" style="width: 130px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();"></select>
             </div>
         </div>
 
         <div class="input-group">
-            <label>ขนาด / ตำแหน่ง:</label>
+            <label>ฟอนต์ / ขนาด / ตำแหน่ง:</label>
             <div style="display:flex; gap:4px;">
-                <input type="number" id="font-size" value="16" style="width: 50px;" oninput="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
-                <select id="num-pos" style="width: 80px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
-                    <option value="TR">ขวาบน</option>
+                <select id="font-style" style="width: 90px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+                    <option value="THSARABUNNEW.TTF" selected>ปกติ</option>
+                    <option value="THSARABUNNEWBOLD.TTF">หนา</option>
+                    <option value="THSARABUNNEWITALIC.TTF">เอียง</option>
+                    <option value="THSARABUNNEWBOLDITALIC.TTF">หนาเอียง</option>
+                </select>
+                <input type="number" id="font-size" value="16" style="width: 60px;" oninput="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+                <select id="num-pos" style="width: 90px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+                    <option value="TR" selected>ขวาบน</option>
                     <option value="TC">กลางบน</option>
                     <option value="BR">ขวาล่าง</option>
                     <option value="BC">กลางล่าง</option>
@@ -155,11 +166,20 @@
             </div>
         </div>
 
-        <div class="input-group" style="max-width: 120px;">
-            <label>ปรับระยะ (X / Y):</label>
-            <div style="display:flex; gap:4px;">
-                <input type="number" id="offset-x" value="0" placeholder="X" oninput="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
-                <input type="number" id="offset-y" value="0" placeholder="Y" oninput="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+        <div class="input-group" style="max-width: 220px;">
+            <label style="display: flex; align-items: center; gap: 5px;">
+                ขยับตำแหน่ง 
+                <span style="background: #e3f2fd; color: #0056b3; padding: 2px 6px; border-radius: 4px; font-size: 9px; cursor: help; border: 1px solid #b6d4fe;" title="เทคนิค:&#10;ใส่เลขบวก หรือ ติดลบ เพื่อกะระยะทิศทาง&#10;↔️ แนวนอน: (+ ขยับขวา, - ขยับซ้าย)&#10;↕️ แนวตั้ง: (+ ขยับขึ้น, - ขยับลง)">💡 คำแนะนำ</span>
+            </label>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <div style="display:flex; align-items:center; gap: 2px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; height: 32px;">
+                    <span style="font-size:12px; cursor: help;" title="แนวนอน (+ ขยับขวา, - ขยับซ้าย)">↔️</span>
+                    <input type="number" id="offset-x" value="0" style="width: 55px; border: none; background: transparent; color: var(--text); padding: 0; text-align: center; outline: none; font-size: 13px;" oninput="if(isPreviewOpen) updatePreviewNumbers();" onchange="saveHistory();">
+                </div>
+                <div style="display:flex; align-items:center; gap: 2px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; height: 32px;">
+                    <span style="font-size:12px; cursor: help;" title="แนวตั้ง (+ ขยับขึ้น, - ขยับลง)">↕️</span>
+                    <input type="number" id="offset-y" value="0" style="width: 55px; border: none; background: transparent; color: var(--text); padding: 0; text-align: center; outline: none; font-size: 13px;" oninput="if(isPreviewOpen) updatePreviewNumbers();" onchange="saveHistory();">
+                </div>
             </div>
         </div>
 
@@ -181,6 +201,7 @@
     <div id="zoom-content">
         <button class="close-modal" onclick="document.getElementById('zoom-modal').style.display='none'">X</button>
         <canvas id="zoom-canvas"></canvas>
+        <div id="zoom-number-preview" class="number-preview"></div>
     </div>
 </div>
 
@@ -355,7 +376,6 @@
         saveHistory();
     }
 
-    // ล้างข้อมูลทั้งหมด
     document.getElementById('btn-clear').onclick = () => {
         if(confirm('ต้องการล้างหน้าเอกสารทั้งหมดใช่ไหมคะ?')) {
             container.innerHTML = '';
@@ -405,8 +425,14 @@
         const type = document.getElementById('num-type').value;
         const format = document.getElementById('num-format').value || '{n}';
         const posType = document.getElementById('num-pos').value;
-        const ox = parseInt(document.getElementById('offset-x').value) * 0.3 || 0;
-        const oy = parseInt(document.getElementById('offset-y').value) * 0.3 || 0;
+        
+        const fontStyleFile = document.getElementById('font-style').value;
+        const isBold = fontStyleFile.includes('BOLD');
+        const isItalic = fontStyleFile.includes('ITALIC');
+        
+        const ox = (parseInt(document.getElementById('offset-x').value) || 0) * 0.3;
+        const oy = (parseInt(document.getElementById('offset-y').value) || 0) * 0.3;
+        const totalPages = container.children.length;
 
         Array.from(container.children).forEach((card, i) => {
             const preview = card.querySelector('.number-preview');
@@ -418,7 +444,11 @@
             }
 
             preview.style.display = 'block';
-            preview.innerText = getFormattedNumberText(i + 1, type, format);
+            preview.innerText = getFormattedNumberText(i + 1, totalPages, type, format);
+            
+            preview.style.fontWeight = isBold ? 'bold' : 'normal';
+            preview.style.fontStyle = isItalic ? 'italic' : 'normal';
+
             preview.style.top = 'auto'; preview.style.bottom = 'auto'; preview.style.left = 'auto'; preview.style.right = 'auto'; preview.style.transform = 'none';
 
             if(posType === 'TR') { preview.style.top = (10 - oy)+'px'; preview.style.right = (10 - ox)+'px'; }
@@ -428,14 +458,23 @@
         });
     }
 
-    function getFormattedNumberText(num, type, format) {
+    function getFormattedNumberText(num, total, type, format) {
         let str = num.toString();
-        if (type === 'thai') str = num.toString().replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
-        else if (type === 'thai-alpha') str = "กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสฬอฮ"[(num-1)%42];
-        return format.replace('{n}', str);
+        let strTotal = total.toString();
+        
+        if (type === 'thai') {
+            str = num.toString().replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
+            strTotal = total.toString().replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
+        }
+        else if (type === 'thai-alpha') {
+            str = "กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสฬอฮ"[(num-1)%42];
+            strTotal = "กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสฬอฮ"[(total-1)%42];
+        }
+        
+        return format.replace('{n}', str).replace('{total}', strTotal);
     }
 
-    // --- ดาวน์โหลด Helper แบบประหยัด Font ---
+    // --- ดาวน์โหลด Helper (ระบบโหลด Font อัตโนมัติแบบประหยัด) ---
     document.getElementById('btn-export').onclick = async () => {
         if (!container.children.length) return alert('กรุณาเลือกไฟล์ PDF ก่อนค่ะ!');
         loading.style.display = 'flex';
@@ -449,7 +488,8 @@
             let font = null;
             if (needsFont) {
                 finalPdf.registerFontkit(fontkit);
-                const fontBytes = await fetch('fonts/THSARABUNNEW.TTF').then(res => res.arrayBuffer());
+                const fontFileName = document.getElementById('font-style').value;
+                const fontBytes = await fetch('fonts/' + fontFileName).then(res => res.arrayBuffer());
                 font = await finalPdf.embedFont(fontBytes);
             }
 
@@ -457,8 +497,10 @@
             const format = document.getElementById('num-format').value;
             const posType = document.getElementById('num-pos').value;
             const fSize = parseInt(document.getElementById('font-size').value);
-            const ox = parseInt(document.getElementById('offset-x').value);
-            const oy = parseInt(document.getElementById('offset-y').value);
+            
+            const ox = parseInt(document.getElementById('offset-x').value) || 0;
+            const oy = parseInt(document.getElementById('offset-y').value) || 0;
+            const totalPages = container.children.length; 
 
             for (let i = 0; i < container.children.length; i++) {
                 const card = container.children[i];
@@ -471,7 +513,7 @@
 
                 if (isMasterEnabled && card.querySelector('.toggle-print').checked && font) {
                     const { width, height } = page.getSize();
-                    const text = getFormattedNumberText(i+1, type, format);
+                    const text = getFormattedNumberText(i+1, totalPages, type, format); 
                     const tw = font.widthOfTextAtSize(text, fSize);
                     let tx, ty, margin = 40;
 
@@ -498,21 +540,36 @@
             a.click();
         } catch(e) { 
             console.error(e); 
-            alert('เกิดข้อผิดพลาดค่ะ! ตรวจสอบว่ามีไฟล์ fonts/THSARABUNNEW.TTF อยู่บนโฮสต์หรือไม่'); 
+            const fontFileName = document.getElementById('font-style').value;
+            alert(`เกิดข้อผิดพลาดค่ะ! ตรวจสอบว่ามีไฟล์ fonts/${fontFileName} อยู่บนโฮสต์หรือไม่`); 
         }
         loading.style.display = 'none';
     };
 
+    // ฟังก์ชันสร้างตัวเลือก Format และล็อคให้ {n} (เฉพาะตัวเลข) เป็นค่าพื้นฐาน
     function updateFormatOptions() {
         const type = document.getElementById('num-type').value;
         const fmt = document.getElementById('num-format');
+        const currentValue = fmt.value;
+        
         const p = (type === 'thai') ? '๑' : (type === 'thai-alpha' ? 'ก' : '1');
+        const t = (type === 'thai') ? '๙' : (type === 'thai-alpha' ? 'ฮ' : '9'); 
+        
         fmt.innerHTML = `
             <option value="- {n} -">- ${p} -</option>
             <option value="หน้า {n}">หน้า ${p}</option>
+            <option value="หน้า {n} / {total}">หน้า ${p} / ${t}</option>
             <option value="({n})">(${p})</option>
             <option value="{n}">${p}</option>
         `;
+        
+        // เช็คว่ามีค่าเก่าอยู่ไหม ถ้าไม่มี(โหลดหน้าแรก) ให้ตั้งค่าเป็น {n} อย่างเดียว
+        if (currentValue && Array.from(fmt.options).some(opt => opt.value === currentValue)) {
+            fmt.value = currentValue;
+        } else {
+            fmt.value = '{n}';
+        }
+
         if(isPreviewOpen) updatePreviewNumbers();
     }
 
@@ -520,14 +577,58 @@
         loading.style.display = 'flex';
         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(card._pdfBytes) }).promise;
         const page = await pdf.getPage(card._originalIdx + 1);
+        
         const viewport = page.getViewport({ scale: 1.5 });
         const zCanvas = document.getElementById('zoom-canvas');
         zCanvas.width = viewport.width; zCanvas.height = viewport.height;
         await page.render({ canvasContext: zCanvas.getContext('2d'), viewport }).promise;
+
+        const zoomPreview = document.getElementById('zoom-number-preview');
+        const isMasterEnabled = document.getElementById('master-num-toggle').checked;
+        const isPrint = card.querySelector('.toggle-print').checked;
+
+        if (!isPreviewOpen || !isPrint || !isMasterEnabled) {
+            zoomPreview.style.display = 'none';
+        } else {
+            const type = document.getElementById('num-type').value;
+            const format = document.getElementById('num-format').value || '{n}';
+            const posType = document.getElementById('num-pos').value;
+            
+            const fontStyleFile = document.getElementById('font-style').value;
+            const isBold = fontStyleFile.includes('BOLD');
+            const isItalic = fontStyleFile.includes('ITALIC');
+            
+            const valX = parseInt(document.getElementById('offset-x').value) || 0;
+            const valY = parseInt(document.getElementById('offset-y').value) || 0;
+            const baseFontSize = parseInt(document.getElementById('font-size').value) || 16;
+            
+            const ox = valX * 1.5;
+            const oy = valY * 1.5;
+            const paddingEdge = 60; 
+
+            const totalPages = container.children.length;
+            const pageIndex = Array.from(container.children).indexOf(card) + 1;
+
+            zoomPreview.innerText = getFormattedNumberText(pageIndex, totalPages, type, format);
+            zoomPreview.style.fontWeight = isBold ? 'bold' : 'normal';
+            zoomPreview.style.fontStyle = isItalic ? 'italic' : 'normal';
+            zoomPreview.style.fontSize = (baseFontSize * 1.5) + 'px'; 
+
+            zoomPreview.style.top = 'auto'; zoomPreview.style.bottom = 'auto'; zoomPreview.style.left = 'auto'; zoomPreview.style.right = 'auto'; zoomPreview.style.transform = 'none';
+
+            if(posType === 'TR') { zoomPreview.style.top = (paddingEdge - oy)+'px'; zoomPreview.style.right = (paddingEdge - ox)+'px'; }
+            else if(posType === 'TC') { zoomPreview.style.top = (paddingEdge - oy)+'px'; zoomPreview.style.left = '50%'; zoomPreview.style.transform = `translateX(calc(-50% + ${ox}px))`; }
+            else if(posType === 'BR') { zoomPreview.style.bottom = (paddingEdge + oy)+'px'; zoomPreview.style.right = (paddingEdge - ox)+'px'; }
+            else if(posType === 'BC') { zoomPreview.style.bottom = (paddingEdge + oy)+'px'; zoomPreview.style.left = '50%'; zoomPreview.style.transform = `translateX(calc(-50% + ${ox}px))`; }
+
+            zoomPreview.style.display = 'block';
+        }
+
         loading.style.display = 'none';
         document.getElementById('zoom-modal').style.display = 'flex';
     }
 
+    // เรียกตอนโหลดหน้าจอให้มัน Set Default ให้เรียบร้อย
     window.onload = () => { updateFormatOptions(); saveHistory(); };
 </script>
 </body>
