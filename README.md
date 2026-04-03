@@ -1,2 +1,28 @@
-# peo-pdf-helper
-A 100% client-side PDF management tool tailored for Thai government agencies. Features include merging, sorting, and smart Thai page numbering without server uploads.
+# 📄 Udon Thani Provincial Education Office PDF Helper (PEO PDF Helper)
+
+ระบบจัดการไฟล์เอกสาร PDF บน Web Browser (Client-side 100%) ออกแบบมาเพื่อแก้ปัญหาและลดภาระงานด้านเอกสารของหน่วยงานราชการ โดยไม่ต้องพึ่งพาโปรแกรมเมอร์ หรือเว็บไซต์ภายนอกที่มีความเสี่ยงด้านความปลอดภัยของข้อมูล
+
+ระบบนี้ประมวลผลบนเครื่องของผู้ใช้งาน (Browser) โดยตรง ไฟล์เอกสารจะ **ไม่ถูกอัปโหลดขึ้นเซิร์ฟเวอร์** ทำให้มั่นใจได้เรื่อง Data Privacy ระดับสูงสุด
+
+## ✨ ฟีเจอร์เด่น (Features)
+- ➕ **Merge / Insert PDF:** รวมไฟล์ PDF และเลือกแทรกหน้าเอกสารได้ตามลำดับที่ต้องการ
+- 🔄 **Rotate & Sort:** หมุนหน้ากระดาษ (ทีละ 90 องศา) และลากสลับตำแหน่งหน้า (Drag & Drop) ได้อย่างอิสระ
+- 🗑️ **Delete Pages:** ลบหน้าที่ไม่ต้องการทิ้งได้ทันที
+- 🔢 **Smart Page Numbering:** รันเลขหน้าอัตโนมัติ รองรับทั้งเลขไทย (๑, ๒, ๓) และอารบิก พร้อมรูปแบบสัญลักษณ์ เช่น `- 1 -`, `หน้า 1`, หรือ `[ 1 ]`
+- 🎯 **Visual Position & Offset:** เลือกตำแหน่งจัดวางเลขหน้า (มุมซ้าย ขวา บน ล่าง) พร้อมระบบ Fine-tuning ขยับแกน X/Y เพื่อหลบตราประทับหรือข้อความเดิมบนเอกสาร
+- 🖨️ **Toggle Print:** สามารถเลือก "ซ่อน" เลขหน้าในบางหน้า (เช่น หน้าปก) โดยที่ระบบยังนับลำดับหน้าต่อเนื่องให้แบบไม่สะดุด
+- 🔍 **Live Preview & Zoom:** ดูตำแหน่งเลขหน้าจำลองก่อนบันทึกจริง และกดขยายเพื่อดูรายละเอียดเอกสารแต่ละหน้าได้
+- 🇹🇭 **Thai Font Embedded:** รองรับการฝังฟอนต์มาตรฐานราชการไทย (TH Sarabun New) ลงในเอกสาร PDF โดยอัตโนมัติ
+
+## 🛠️ เทคโนโลยีที่ใช้ (Tech Stack)
+- HTML5, CSS3, JavaScript (Vanilla)
+- [PDF.js](https://mozilla.github.io/pdf.js/) (สำหรับการสร้าง Thumbnail และ Preview)
+- [PDF-lib](https://pdf-lib.js.org/) (Engine หลักสำหรับจัดการโครงสร้างไฟล์ PDF และฝังฟอนต์)
+- [SortableJS](https://sortablejs.github.io/Sortable/) (สำหรับระบบลากวางจัดเรียงหน้า)
+
+## 🚀 วิธีการติดตั้งและใช้งาน (Installation)
+1. Clone Repository นี้ลงในเครื่อง หรือเซิร์ฟเวอร์ของคุณ
+   ```bash
+   git clone [https://github.com/mamazaki/peo-pdf-helper.git](https://github.com/mamazaki/peo-pdf-helper.git)
+
+## ออกแบบ และพัฒนาโดย นายสุทธิชัย ชมชื่น นักวิชาการคอมพิวเตอร์ชำนาญการ กลุ่มนโยบายและแผน สำนักงานศึกษาธิการจังหวัดอุดรธานี
