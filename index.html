@@ -11,97 +11,63 @@
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
 
     <style>
-        /* CSS Variables และ Dark Mode */
         :root { 
             --primary: #0056b3; --success: #28a745; --danger: #dc3545; 
             --bg: #f0f2f5; --card-bg: #ffffff; --text: #333333; --border: #dddddd;
             --critical: #8b0000; --warning: #ffc107;
         }
-
         [data-theme="dark"] {
             --bg: #1a1a1a; --card-bg: #2d2d2d; --text: #f0f0f0; --border: #444444;
             --primary: #3793ff;
         }
-
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; transition: 0.3s; }
-        
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; transition: 0.3s; min-height: 100vh; }
         .system-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
         .system-logo { height: 40px; width: auto; object-fit: contain; }
         .system-title { font-size: 18px; font-weight: bold; color: var(--primary); margin: 0; }
-        
-        /* ปรับ Toolbar ให้กะทัดรัดขึ้น */
         .toolbar { 
             background: var(--card-bg); padding: 12px 15px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); 
             margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; position: sticky; top: 15px; z-index: 100;
             border: 1px solid var(--border);
         }
-
         .btn { padding: 4px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; display: flex; align-items: center; gap: 4px; height: 32px; white-space: nowrap; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-success { background: var(--success); color: white; }
         .btn-danger { background: var(--danger); color: white; }
-        
         .btn-critical { background: var(--critical) !important; color: #ffffff !important; border: 2px solid #ff4500 !important; font-weight: 800 !important; grid-column: span 2; margin-top: 5px; }
         .btn:hover { opacity: 0.9; transform: translateY(-1px); }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-
         .history-group { display: flex; gap: 4px; background: var(--border); padding: 4px; border-radius: 6px; }
-
         label { font-size:10px; font-weight:bold; margin-bottom: 3px; display: block; color: var(--text); text-transform: uppercase; }
         .input-group { display:flex; flex-direction:column; flex: 1 1 auto; min-width: 100px; }
         input[type="number"], select { padding:4px 8px; border-radius:6px; border:1px solid var(--border); height: 32px; box-sizing: border-box; width: 100%; font-size: 13px; background: var(--card-bg); color: var(--text); }
-
         .system-credit { font-size: 10px; color: #777; width: 100%; text-align: right; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-weight: 500; }
-
         #pdf-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
         .page-card { background: var(--card-bg); padding: 8px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); position: relative; display: flex; flex-direction: column; cursor: grab; border: 2px solid var(--border); }
         .page-card:hover { border-color: var(--primary); }
         .canvas-wrapper { width: 100%; aspect-ratio: 1 / 1.4; background: #f8f9fa; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 4px; position: relative; }
         .page-card canvas { max-width: 100%; max-height: 100%; transition: transform 0.3s; }
-        
-        .number-preview { 
-            position: absolute; 
-            color: #000000 !important; 
-            font-weight: bold; 
-            background: rgba(255, 255, 255, 0.9) !important; 
-            border: 1px dashed #000000 !important; 
-            padding: 2px 5px; 
-            pointer-events: none; 
-            display: none; 
-            z-index: 20; 
-            white-space: nowrap; 
-        }
-
+        .number-preview { position: absolute; color: #000000 !important; background: rgba(255, 255, 255, 0.9) !important; border: 1px dashed #000000 !important; padding: 2px 4px; font-size: 11px; pointer-events: none; display: none; z-index: 20; white-space: nowrap; }
+        #zoom-number-preview { background: transparent !important; border: 1px dashed rgba(0, 0, 0, 0.5) !important; padding: 0; }
         .page-info { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; z-index: 10; }
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 8px; }
         .controls button { padding: 4px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); border-radius: 4px; }
         .toggle-print-label { grid-column: span 2; font-size: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 4px; border-radius: 4px; font-weight: bold; background: #e3f2fd; color: #0056b3; border: 1px solid #b6d4fe; }
         .toggle-print-label.disabled { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
-
+        
+        /* Modal Style */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; padding: 20px; }
+        .modal-box { background: var(--card-bg); color: var(--text); padding: 25px; border-radius: 12px; max-width: 500px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid var(--border); position: relative; }
+        .modal-title { font-size: 18px; font-weight: bold; color: var(--danger); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .modal-body { font-size: 14px; line-height: 1.6; white-space: pre-wrap; margin-bottom: 20px; }
+        .modal-footer { display: flex; justify-content: flex-end; }
+        
         #zoom-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
-        #zoom-content { background: var(--card-bg); padding: 10px; border-radius: 8px; position: relative; max-width: 95vw; max-height: 95vh; display: flex; flex-direction: column; border: 1px solid var(--border); }
-        .close-modal { position: absolute; top: -15px; right: -15px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+        #zoom-content { background: var(--card-bg); padding: 10px; border-radius: 8px; position: relative; max-width: 95vw; max-height: 95vh; display: flex; flex-direction: column; border: 1px solid var(--border); overflow: hidden; }
+        .close-modal { position: absolute; top: -15px; right: -15px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; z-index: 100; }
         #zoom-canvas { max-width: 100%; max-height: calc(95vh - 20px); object-fit: contain; }
         #loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); align-items: center; justify-content: center; z-index: 2000; flex-direction: column; }
-
-        .tabs { display: flex; gap: 8px; margin-bottom: 15px; }
-        .tab-btn { padding: 8px 16px; border: none; background: var(--border); color: var(--text); border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: bold; }
-        .tab-btn.active { background: var(--primary); color: white; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-        .theme-switch {
-            position: fixed; top: 15px; right: 15px; z-index: 9999;
-            background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 50px;
-            cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-weight: bold; font-size: 11px;
-        }
-
-        /* Styles เฉพาะสำหรับส่วน Resizer เดิม */
-        .resizer-alert { background: #fff3cd; color: #856404; padding: 12px; border-radius: 6px; font-size: 12px; margin-bottom: 15px; border-left: 4px solid #ffeeba; }
-        .rs-progress-bg { background: var(--border); border-radius: 6px; height: 15px; width: 100%; overflow: hidden; margin-top: 8px; position: relative; }
-        .rs-progress-fill { background: var(--success); height: 100%; width: 0%; transition: width 0.3s; }
-        #rs-status-text { font-size: 13px; color: var(--primary); font-weight: bold; margin-top: 8px; }
+        .theme-switch { position: fixed; top: 15px; right: 15px; z-index: 9999; background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-weight: bold; font-size: 11px; }
+        body.drag-over { outline: 5px dashed var(--primary); outline-offset: -10px; background: rgba(0, 86, 179, 0.1); }
     </style>
 </head>
 <body>
@@ -113,17 +79,22 @@
     <div id="loading-status">โปรดรอสักครู่</div>
 </div>
 
-<header class="system-header">
-    <img src="img/logo.png" alt="PEO Udon Logo" class="system-logo">
-    <h1 class="system-title">Udon Thani Provincial Education Office PDF Tools</h1>
-</header>
-
-<div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('tab-helper', this)">📄 จัดการเอกสาร & รันเลขหน้า (Helper)</button>
-    <button class="tab-btn" onclick="switchTab('tab-resizer', this)">🗜️ ย่อขนาดไฟล์สแกน (Resizer)</button>
+<div id="alert-modal" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-title">⚠️ ไฟล์มีการป้องกันด้วยรหัสผ่าน</div>
+        <div id="alert-body" class="modal-body"></div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="closeAlert()">ตกลง (เข้าใจแล้ว)</button>
+        </div>
+    </div>
 </div>
 
-<div id="tab-helper" class="tab-content active">
+<header class="system-header">
+    <img src="img/logo.png" alt="PEO Udon Logo" class="system-logo">
+    <h1 class="system-title">Udon Thani Provincial Education Office PDF Helper</h1>
+</header>
+
+<div id="main-content">
     <div class="toolbar">
         <div class="history-group">
             <button id="btn-undo" class="btn" title="Undo" disabled>↩️</button>
@@ -131,7 +102,7 @@
         </div>
 
         <div class="input-group">
-            <label>➕ เพิ่มไฟล์ PDF:</label>
+            <label>➕ เพิ่มไฟล์ PDF (หรือลากมาวาง):</label>
             <input type="file" id="file-upload" accept="application/pdf" multiple style="padding: 3px;">
         </div>
 
@@ -143,29 +114,35 @@
         <div class="input-group" style="border-left: 1px solid var(--border); padding-left: 10px; flex: 0 0 auto;">
             <label>สถานะการรันเลข:</label>
             <div style="display:flex; align-items:center; gap:6px; height:32px;">
-                <input type="checkbox" id="master-num-toggle" checked onchange="toggleMasterNumbering()" style="width:16px; height:16px; cursor:pointer;">
-                <span id="master-toggle-text" style="font-size:12px; font-weight:bold; color:var(--success);">เปิดการรันเลข</span>
+                <input type="checkbox" id="master-num-toggle" onchange="toggleMasterNumbering()" style="width:16px; height:16px; cursor:pointer;">
+                <span id="master-toggle-text" style="font-size:12px; font-weight:bold; color:var(--danger);">ปิดรันเลข (ต่อไฟล์เฉยๆ)</span>
             </div>
         </div>
 
         <div class="input-group" style="border-left: 1px solid var(--border); padding-left: 10px;">
             <label>รูปแบบตัวเลข:</label>
             <div style="display:flex; gap:4px;">
-                <select id="num-type" style="width: 80px;" onchange="updateFormatOptions()">
+                <select id="num-type" style="width: 100px;" onchange="updateFormatOptions()">
                     <option value="arabic">อารบิก</option>
-                    <option value="thai">เลขไทย</option>
+                    <option value="thai" selected>เลขไทย</option>
                     <option value="thai-alpha">ก ข ค</option>
                 </select>
-                <select id="num-format" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();"></select>
+                <select id="num-format" style="width: 130px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();"></select>
             </div>
         </div>
 
         <div class="input-group">
-            <label>ขนาด / ตำแหน่ง:</label>
+            <label>ฟอนต์ / ขนาด / ตำแหน่ง:</label>
             <div style="display:flex; gap:4px;">
-                <input type="number" id="font-size" value="16" style="width: 50px;" oninput="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
-                <select id="num-pos" style="width: 80px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
-                    <option value="TR">ขวาบน</option>
+                <select id="font-style" style="width: 90px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+                    <option value="THSARABUNNEW.TTF" selected>ปกติ</option>
+                    <option value="THSARABUNNEWBOLD.TTF">หนา</option>
+                    <option value="THSARABUNNEWITALIC.TTF">เอียง</option>
+                    <option value="THSARABUNNEWBOLDITALIC.TTF">หนาเอียง</option>
+                </select>
+                <input type="number" id="font-size" value="16" style="width: 60px;" oninput="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+                <select id="num-pos" style="width: 90px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+                    <option value="TR" selected>ขวาบน</option>
                     <option value="TC">กลางบน</option>
                     <option value="BR">ขวาล่าง</option>
                     <option value="BC">กลางล่าง</option>
@@ -173,11 +150,20 @@
             </div>
         </div>
 
-        <div class="input-group" style="max-width: 120px;">
-            <label>ปรับระยะ (X / Y):</label>
-            <div style="display:flex; gap:4px;">
-                <input type="number" id="offset-x" value="0" placeholder="X" oninput="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
-                <input type="number" id="offset-y" value="0" placeholder="Y" oninput="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+        <div class="input-group" style="max-width: 220px;">
+            <label style="display: flex; align-items: center; gap: 5px;">
+                ขยับตำแหน่ง 
+                <span style="background: #e3f2fd; color: #0056b3; padding: 2px 6px; border-radius: 4px; font-size: 9px; cursor: help; border: 1px solid #b6d4fe;" title="เทคนิค:&#10;ใส่เลขบวก หรือ ติดลบ เพื่อกะระยะทิศทาง&#10;↔️ แนวนอน: (+ ขยับขวา, - ขยับซ้าย)&#10;↕️ แนวตั้ง: (+ ขยับขึ้น, - ขยับลง)">💡 คำแนะนำ</span>
+            </label>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <div style="display:flex; align-items:center; gap: 2px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; height: 32px;">
+                    <span style="font-size:12px; cursor: help;" title="แนวนอน (+ ขยับขวา, - ขยับซ้าย)">↔️</span>
+                    <input type="number" id="offset-x" value="0" style="width: 55px; border: none; background: transparent; color: var(--text); padding: 0; text-align: center; outline: none; font-size: 13px;" oninput="if(isPreviewOpen) updatePreviewNumbers();" onchange="saveHistory();">
+                </div>
+                <div style="display:flex; align-items:center; gap: 2px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; height: 32px;">
+                    <span style="font-size:12px; cursor: help;" title="แนวตั้ง (+ ขยับขึ้น, - ขยับลง)">↕️</span>
+                    <input type="number" id="offset-y" value="0" style="width: 55px; border: none; background: transparent; color: var(--text); padding: 0; text-align: center; outline: none; font-size: 13px;" oninput="if(isPreviewOpen) updatePreviewNumbers();" onchange="saveHistory();">
+                </div>
             </div>
         </div>
 
@@ -195,49 +181,15 @@
     <div id="pdf-container"></div>
 </div>
 
-<div id="tab-resizer" class="tab-content">
-    <div class="toolbar" style="max-width: 800px; margin: 0 auto; flex-direction: column; align-items: stretch;">
-        <div class="resizer-alert">
-            <strong>⚠️ ข้อควรทราบ:</strong> ระบบนี้จะทำการแปลงเอกสารให้เป็นรูปภาพเพื่อรีดขนาดไฟล์ให้เล็กที่สุด เหมาะสำหรับ <strong>"ไฟล์สแกน"</strong> ข้อความในไฟล์ผลลัพธ์จะไม่สามารถคลุมดำก๊อปปี้ได้ค่ะ
-        </div>
-
-        <div class="input-group">
-            <label>📂 เลือกไฟล์ PDF ที่ต้องการลดขนาด:</label>
-            <input type="file" id="rs-file-upload" accept="application/pdf" style="padding: 3px;">
-            <div id="rs-size-info" style="font-size: 11px; color: #666; margin-top: 4px;"></div>
-        </div>
-
-        <div class="input-group">
-            <label>⚙️ เลือกระดับการบีบอัด (ยิ่งเปอร์เซ็นต์น้อย ไฟล์ยิ่งเล็ก):</label>
-            <select id="rs-compress-level" style="background: #e3f2fd; border: 1px solid #90caf9; font-weight: bold; color: #000;">
-                <option value="100">100% (คุณภาพสูงสุด - ไฟล์ใหญ่)</option>
-                <option value="80">80% (คุณภาพสูง)</option>
-                <option value="60" selected>60% (มาตรฐาน - สมดุล)</option>
-                <option value="40">40% (บีบอัดเยอะ - ไฟล์เล็ก)</option>
-                <option value="20">20% (บีบอัดสูงสุด - ไฟล์เล็กจิ๋ว)</option>
-            </select>
-        </div>
-
-        <button id="rs-btn-start" class="btn btn-primary" style="justify-content: center;" disabled>🚀 เริ่มบีบอัดไฟล์ PDF</button>
-
-        <div id="rs-progress-container" style="display: none; margin-top: 15px; text-align: center; width: 100%;">
-            <div id="rs-status-text">กำลังเตรียมการ...</div>
-            <div class="rs-progress-bg">
-                <div class="rs-progress-fill" id="rs-progress-fill"></div>
-            </div>
-        </div>
-    </div>
-</div>
-
 <div id="zoom-modal" onclick="if(event.target === this) this.style.display='none'">
     <div id="zoom-content">
         <button class="close-modal" onclick="document.getElementById('zoom-modal').style.display='none'">X</button>
         <canvas id="zoom-canvas"></canvas>
+        <div id="zoom-number-preview" class="number-preview"></div>
     </div>
 </div>
 
 <script>
-    // --- ระบบ Dark Mode ---
     function toggleTheme() {
         const body = document.documentElement;
         const btn = document.getElementById('theme-btn');
@@ -250,6 +202,15 @@
             btn.innerText = '☀️ Light Mode';
             localStorage.setItem('theme', 'dark');
         }
+    }
+
+    // Custom Alert Logic
+    function showAlert(msg) {
+        document.getElementById('alert-body').innerText = msg;
+        document.getElementById('alert-modal').style.display = 'flex';
+    }
+    function closeAlert() {
+        document.getElementById('alert-modal').style.display = 'none';
     }
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -265,7 +226,30 @@
     const loading = document.getElementById('loading');
     let isPreviewOpen = false;
 
-    // --- ระบบ History (Undo/Redo) ---
+    // ระบบ Drag & Drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        document.body.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    document.body.addEventListener('dragover', () => {
+        document.body.classList.add('drag-over');
+    });
+    
+    document.body.addEventListener('dragleave', () => {
+        document.body.classList.remove('drag-over');
+    });
+
+    document.body.addEventListener('drop', async (e) => {
+        document.body.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            await handleFiles(files);
+        }
+    });
+
     let historyStack = [];
     let redoStack = [];
 
@@ -313,9 +297,12 @@
             card._originalIdx = data.idx;
             card.querySelector('canvas').style.transform = `rotate(${data.rotation}deg)`;
             card.querySelector('.toggle-print').checked = data.print;
-            card.querySelector('.toggle-print').onchange = () => { 
-                const lbl = card.querySelector('.toggle-print-label');
-                lbl.classList.toggle('disabled', !card.querySelector('.toggle-print').checked);
+            
+            const togglePrint = card.querySelector('.toggle-print');
+            const lbl = card.querySelector('.toggle-print-label');
+            togglePrint.onchange = () => { 
+                lbl.classList.toggle('disabled', !togglePrint.checked);
+                lbl.querySelector('span').innerText = togglePrint.checked ? '🖨️ พิมพ์เลข' : '🚫 ซ่อนเลข';
                 saveHistory(); 
                 if(isPreviewOpen) updatePreviewNumbers(); 
             };
@@ -325,20 +312,38 @@
         if(isPreviewOpen) updatePreviewNumbers();
     }
 
-    // --- ฟังก์ชันหลัก (Helper) ---
     const sortable = new Sortable(container, { 
         animation: 150,
         onEnd: () => { updateAllBadges(); saveHistory(); }
     });
 
     document.getElementById('file-upload').addEventListener('change', async (e) => {
-        const files = e.target.files;
+        await handleFiles(e.target.files);
+        e.target.value = '';
+    });
+
+    async function handleFiles(files) {
         if (!files.length) return;
         loading.style.display = 'flex';
+        document.getElementById('loading-status').innerText = 'กำลังประมวลผล PDF...';
 
         for (const file of files) {
+            if (file.type !== "application/pdf") continue;
             const bytes = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+            let pdf = null;
+
+            try {
+                pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+            } catch (err) {
+                // แก้ไข: ใช้ Modal แทน alert เพื่อให้แสดงข้อความได้ครบถ้วน
+                if (err.name === 'PasswordException' || err.message.includes('encrypted')) {
+                    showAlert(`ไฟล์ "${file.name}" มีการป้องกันด้วยรหัสผ่าน\n\nระบบไม่สามารถนำเข้าไฟล์ที่ล็อกรหัสผ่านได้โดยตรง\n\nวิธีแก้ไข:\n1. เปิดไฟล์ PDF นี้ด้วยโปรแกรม Google Chrome\n2. กรอกรหัสผ่านเพื่อเปิดไฟล์ให้เรียบร้อย\n3. กดปุ่มพิมพ์ (Print) หรือกด Ctrl + P\n4. เลือกเครื่องพิมพ์ (Destination) เป็น "Save as PDF" หรือ "บันทึกเป็น PDF"\n5. กดบันทึกเพื่อสร้างไฟล์ใหม่ที่ไม่มีรหัสผ่าน แล้วจึงนำไฟล์นั้นกลับมาใช้งานในระบบอีกครั้ง`);
+                } else {
+                    showAlert(`เกิดข้อผิดพลาดในการเปิดไฟล์ "${file.name}": ${err.message}`);
+                }
+                continue;
+            }
+
             const pos = insertPosSelect.value;
             const newCards = [];
 
@@ -357,8 +362,7 @@
         updateAllBadges();
         saveHistory();
         loading.style.display = 'none';
-        e.target.value = '';
-    });
+    }
 
     async function createPageCard(page, pageNum, pdfBytes) {
         const viewport = page.getViewport({ scale: 0.3 });
@@ -375,17 +379,21 @@
             <div class="page-info"></div>
             <div class="canvas-wrapper"><div class="number-preview"></div></div>
             <div class="controls">
-                <label class="toggle-print-label"><input type="checkbox" class="toggle-print" checked style="margin:0;"><span>🖨️ พิมพ์เลข</span></label>
+                <label class="toggle-print-label disabled">
+                    <input type="checkbox" class="toggle-print" style="margin:0;">
+                    <span>🚫 ซ่อนเลข</span>
+                </label>
                 <button type="button" onclick="rotateCard(this.closest('.page-card'))">🔄 หมุน</button>
                 <button type="button" onclick="zoomCard(this.closest('.page-card'))">🔍 ขยาย</button>
-                <button type="button" class="btn-critical" onclick="deleteCard(this.closest('.page-card'))">🗑️ ลบ (Undo ได้)</button>
+                <button type="button" class="btn-critical" onclick="deleteCard(this.closest('.page-card'))">🗑️ ลบ</button>
             </div>
         `;
         
         card.querySelector('.toggle-print').addEventListener('change', (ev) => {
             const lbl = ev.target.closest('label');
-            lbl.classList.toggle('disabled', !ev.target.checked);
-            lbl.querySelector('span').innerText = ev.target.checked ? '🖨️ พิมพ์เลข' : '🚫 ซ่อนเลข';
+            const isChecked = ev.target.checked;
+            lbl.classList.toggle('disabled', !isChecked);
+            lbl.querySelector('span').innerText = isChecked ? '🖨️ พิมพ์เลข' : '🚫 ซ่อนเลข';
             saveHistory();
             if(isPreviewOpen) updatePreviewNumbers();
         });
@@ -407,7 +415,6 @@
         saveHistory();
     }
 
-    // ล้างข้อมูลทั้งหมด
     document.getElementById('btn-clear').onclick = () => {
         if(confirm('ต้องการล้างหน้าเอกสารทั้งหมดใช่ไหมคะ?')) {
             container.innerHTML = '';
@@ -428,7 +435,6 @@
         if(isPreviewOpen) updatePreviewNumbers();
     }
 
-    // --- ส่วนแสดงผลตัวเลข (Preview) ---
     document.getElementById('btn-preview-toggle').onclick = function() {
         isPreviewOpen = !isPreviewOpen;
         this.innerText = isPreviewOpen ? '❌ ปิดพรีวิว' : '👁️ ดูเลข';
@@ -457,8 +463,14 @@
         const type = document.getElementById('num-type').value;
         const format = document.getElementById('num-format').value || '{n}';
         const posType = document.getElementById('num-pos').value;
-        const ox = parseInt(document.getElementById('offset-x').value) * 0.3 || 0;
-        const oy = parseInt(document.getElementById('offset-y').value) * 0.3 || 0;
+        
+        const fontStyleFile = document.getElementById('font-style').value;
+        const isBold = fontStyleFile.includes('BOLD');
+        const isItalic = fontStyleFile.includes('ITALIC');
+        
+        const ox = (parseInt(document.getElementById('offset-x').value) || 0) * 0.3;
+        const oy = (parseInt(document.getElementById('offset-y').value) || 0) * 0.3;
+        const totalPages = container.children.length;
 
         Array.from(container.children).forEach((card, i) => {
             const preview = card.querySelector('.number-preview');
@@ -470,7 +482,11 @@
             }
 
             preview.style.display = 'block';
-            preview.innerText = getFormattedNumberText(i + 1, type, format);
+            preview.innerText = getFormattedNumberText(i + 1, totalPages, type, format);
+            
+            preview.style.fontWeight = isBold ? 'bold' : 'normal';
+            preview.style.fontStyle = isItalic ? 'italic' : 'normal';
+
             preview.style.top = 'auto'; preview.style.bottom = 'auto'; preview.style.left = 'auto'; preview.style.right = 'auto'; preview.style.transform = 'none';
 
             if(posType === 'TR') { preview.style.top = (10 - oy)+'px'; preview.style.right = (10 - ox)+'px'; }
@@ -480,61 +496,64 @@
         });
     }
 
-    function getFormattedNumberText(num, type, format) {
+    function getFormattedNumberText(num, total, type, format) {
         let str = num.toString();
-        if (type === 'thai') str = num.toString().replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
-        else if (type === 'thai-alpha') str = "กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสฬอฮ"[(num-1)%42];
-        return format.replace('{n}', str);
+        let strTotal = total.toString();
+        if (type === 'thai') {
+            str = num.toString().replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
+            strTotal = total.toString().replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
+        }
+        else if (type === 'thai-alpha') {
+            const alphabet = "กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสฬอฮ";
+            str = alphabet[(num-1) % alphabet.length];
+            strTotal = alphabet[(total-1) % alphabet.length];
+        }
+        return format.replace('{n}', str).replace('{total}', strTotal);
     }
 
-    // --- ดาวน์โหลด Helper แบบประหยัด Font ---
     document.getElementById('btn-export').onclick = async () => {
         if (!container.children.length) return alert('กรุณาเลือกไฟล์ PDF ก่อนค่ะ!');
         loading.style.display = 'flex';
         try {
             const { PDFDocument, degrees } = PDFLib;
             const finalPdf = await PDFDocument.create();
-            
             const isMasterEnabled = document.getElementById('master-num-toggle').checked;
             const needsFont = isMasterEnabled && Array.from(container.children).some(card => card.querySelector('.toggle-print').checked);
-            
             let font = null;
             if (needsFont) {
                 finalPdf.registerFontkit(fontkit);
-                const fontBytes = await fetch('fonts/THSARABUNNEW.TTF').then(res => res.arrayBuffer());
+                const fontFileName = document.getElementById('font-style').value;
+                const fontBytes = await fetch('fonts/' + fontFileName).then(res => res.arrayBuffer());
                 font = await finalPdf.embedFont(fontBytes);
             }
-
             const type = document.getElementById('num-type').value;
             const format = document.getElementById('num-format').value;
             const posType = document.getElementById('num-pos').value;
             const fSize = parseInt(document.getElementById('font-size').value);
-            const ox = parseInt(document.getElementById('offset-x').value);
-            const oy = parseInt(document.getElementById('offset-y').value);
+            const ox = parseInt(document.getElementById('offset-x').value) || 0;
+            const oy = parseInt(document.getElementById('offset-y').value) || 0;
+            const totalPages = container.children.length; 
 
             for (let i = 0; i < container.children.length; i++) {
                 const card = container.children[i];
-                const src = await PDFDocument.load(card._pdfBytes);
+                const src = await PDFDocument.load(card._pdfBytes, { ignoreEncryption: true });
                 const [page] = await finalPdf.copyPages(src, [card._originalIdx]);
-                
                 const rot = parseInt(card.dataset.rotation);
                 const totalRot = (page.getRotation().angle + rot) % 360;
                 page.setRotation(degrees(totalRot));
 
                 if (isMasterEnabled && card.querySelector('.toggle-print').checked && font) {
                     const { width, height } = page.getSize();
-                    const text = getFormattedNumberText(i+1, type, format);
+                    const text = getFormattedNumberText(i+1, totalPages, type, format); 
                     const tw = font.widthOfTextAtSize(text, fSize);
-                    let tx, ty, margin = 40;
-
+                    let margin = 40;
                     const vW = (totalRot === 90 || totalRot === 270) ? height : width;
                     const vH = (totalRot === 90 || totalRot === 270) ? width : height;
-
+                    let tx, ty;
                     if(posType === 'TR') { tx = vW - tw - margin + ox; ty = vH - margin - fSize + oy; }
                     else if(posType === 'TC') { tx = (vW - tw)/2 + ox; ty = vH - margin - fSize + oy; }
                     else if(posType === 'BR') { tx = vW - tw - margin + ox; ty = margin + oy; }
                     else if(posType === 'BC') { tx = (vW - tw)/2 + ox; ty = margin + oy; }
-
                     let fx = tx, fy = ty;
                     if(totalRot === 90) { fx = width - ty - fSize; fy = tx; }
                     else if(totalRot === 180) { fx = width - tx - tw; fy = height - ty - fSize; }
@@ -550,7 +569,7 @@
             a.click();
         } catch(e) { 
             console.error(e); 
-            alert('เกิดข้อผิดพลาดค่ะ! ตรวจสอบว่ามีไฟล์ fonts/THSARABUNNEW.TTF อยู่บนโฮสต์หรือไม่'); 
+            showAlert(`เกิดข้อผิดพลาดในการประมวลผล: ${e.message}\n\nคำแนะนำ: หากไฟล์มีการล็อกรหัสผ่าน กรุณาใช้วิธี Print as PDF เพื่อถอดรหัสไฟล์ต้นฉบับก่อนใช้งานค่ะ`); 
         }
         loading.style.display = 'none';
     };
@@ -558,125 +577,68 @@
     function updateFormatOptions() {
         const type = document.getElementById('num-type').value;
         const fmt = document.getElementById('num-format');
+        const currentValue = fmt.value;
         const p = (type === 'thai') ? '๑' : (type === 'thai-alpha' ? 'ก' : '1');
+        const t = (type === 'thai') ? '๙' : (type === 'thai-alpha' ? 'ฮ' : '9'); 
         fmt.innerHTML = `
+            <option value="{n}">${p}</option>
             <option value="- {n} -">- ${p} -</option>
             <option value="หน้า {n}">หน้า ${p}</option>
+            <option value="หน้า {n} / {total}">หน้า ${p} / ${t}</option>
             <option value="({n})">(${p})</option>
-            <option value="{n}">${p}</option>
         `;
+        if (currentValue && Array.from(fmt.options).some(opt => opt.value === currentValue)) {
+            fmt.value = currentValue;
+        } else {
+            fmt.value = '{n}';
+        }
         if(isPreviewOpen) updatePreviewNumbers();
-    }
-
-    function switchTab(id, btn) {
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-        btn.classList.add('active');
     }
 
     async function zoomCard(card) {
         loading.style.display = 'flex';
-        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(card._pdfBytes) }).promise;
-        const page = await pdf.getPage(card._originalIdx + 1);
-        const viewport = page.getViewport({ scale: 1.5 });
-        const zCanvas = document.getElementById('zoom-canvas');
-        zCanvas.width = viewport.width; zCanvas.height = viewport.height;
-        await page.render({ canvasContext: zCanvas.getContext('2d'), viewport }).promise;
+        try {
+            const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(card._pdfBytes) }).promise;
+            const page = await pdf.getPage(card._originalIdx + 1);
+            const viewport = page.getViewport({ scale: 1.5 });
+            const zCanvas = document.getElementById('zoom-canvas');
+            zCanvas.width = viewport.width; zCanvas.height = viewport.height;
+            await page.render({ canvasContext: zCanvas.getContext('2d'), viewport }).promise;
+            const zoomPreview = document.getElementById('zoom-number-preview');
+            const isMasterEnabled = document.getElementById('master-num-toggle').checked;
+            const isPrint = card.querySelector('.toggle-print').checked;
+            if (!isPreviewOpen || !isPrint || !isMasterEnabled) {
+                zoomPreview.style.display = 'none';
+            } else {
+                const type = document.getElementById('num-type').value;
+                const format = document.getElementById('num-format').value || '{n}';
+                const posType = document.getElementById('num-pos').value;
+                const fontStyleFile = document.getElementById('font-style').value;
+                const isBold = fontStyleFile.includes('BOLD');
+                const isItalic = fontStyleFile.includes('ITALIC');
+                const ox = (parseInt(document.getElementById('offset-x').value) || 0) * 1.5;
+                const oy = (parseInt(document.getElementById('offset-y').value) || 0) * 1.5;
+                const baseFontSize = parseInt(document.getElementById('font-size').value) || 16;
+                const paddingEdge = 60; 
+                const totalPages = container.children.length;
+                const pageIndex = Array.from(container.children).indexOf(card) + 1;
+                zoomPreview.innerText = getFormattedNumberText(pageIndex, totalPages, type, format);
+                zoomPreview.style.fontWeight = isBold ? 'bold' : 'normal';
+                zoomPreview.style.fontStyle = isItalic ? 'italic' : 'normal';
+                zoomPreview.style.fontSize = (baseFontSize * 1.5) + 'px'; 
+                zoomPreview.style.top = 'auto'; zoomPreview.style.bottom = 'auto'; zoomPreview.style.left = 'auto'; zoomPreview.style.right = 'auto'; zoomPreview.style.transform = 'none';
+                if(posType === 'TR') { zoomPreview.style.top = (paddingEdge - oy)+'px'; zoomPreview.style.right = (paddingEdge - ox)+'px'; }
+                else if(posType === 'TC') { zoomPreview.style.top = (paddingEdge - oy)+'px'; zoomPreview.style.left = '50%'; zoomPreview.style.transform = `translateX(calc(-50% + ${ox}px))`; }
+                else if(posType === 'BR') { zoomPreview.style.bottom = (paddingEdge + oy)+'px'; zoomPreview.style.right = (paddingEdge - ox)+'px'; }
+                else if(posType === 'BC') { zoomPreview.style.bottom = (paddingEdge + oy)+'px'; zoomPreview.style.left = '50%'; zoomPreview.style.transform = `translateX(calc(-50% + ${ox}px))`; }
+                zoomPreview.style.display = 'block';
+            }
+        } catch (e) {
+            console.error(e);
+        }
         loading.style.display = 'none';
         document.getElementById('zoom-modal').style.display = 'flex';
     }
-
-    // --- ส่วนของ Resizer คงเดิม ---
-    (() => {
-        const rsInput = document.getElementById('rs-file-upload');
-        const rsBtn = document.getElementById('rs-btn-start');
-        const rsProgCont = document.getElementById('rs-progress-container');
-        const rsProgFill = document.getElementById('rs-progress-fill');
-        const rsStatus = document.getElementById('rs-status-text');
-        const rsSizeInfo = document.getElementById('rs-size-info');
-        
-        let rsOriginalFile = null;
-
-        rsInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                rsOriginalFile = e.target.files[0];
-                const mb = (rsOriginalFile.size / (1024 * 1024)).toFixed(2);
-                rsSizeInfo.innerHTML = `ขนาดไฟล์ต้นฉบับ: <strong style="color:var(--danger)">${mb} MB</strong>`;
-                rsBtn.disabled = false;
-            } else {
-                rsBtn.disabled = true;
-                rsSizeInfo.innerHTML = '';
-            }
-        });
-
-        const getRsSettings = () => {
-            const level = document.getElementById('rs-compress-level').value;
-            if (level === '100') return { scale: 2.0, quality: 0.9 };  
-            if (level === '80')  return { scale: 1.6, quality: 0.8 }; 
-            if (level === '60')  return { scale: 1.2, quality: 0.6 };  
-            if (level === '40')  return { scale: 0.8, quality: 0.4 }; 
-            if (level === '20')  return { scale: 0.5, quality: 0.2 }; 
-            return { scale: 1.2, quality: 0.6 }; 
-        };
-
-        rsBtn.addEventListener('click', async () => {
-            if (!rsOriginalFile) return;
-            rsBtn.disabled = true; rsInput.disabled = true;
-            rsProgCont.style.display = 'block';
-            try {
-                const settings = getRsSettings();
-                const fileBytes = await rsOriginalFile.arrayBuffer();
-                rsStatus.innerText = 'กำลังวิเคราะห์โครงสร้าง PDF...';
-                const pdfDocjs = await pdfjsLib.getDocument({ data: new Uint8Array(fileBytes) }).promise;
-                const totalPages = pdfDocjs.numPages;
-                const { PDFDocument } = PDFLib;
-                const finalPdf = await PDFDocument.create();
-
-                for (let i = 1; i <= totalPages; i++) {
-                    rsStatus.innerText = `กำลังบีบอัดหน้า ${i} จาก ${totalPages}...`;
-                    rsProgFill.style.width = `${((i - 1) / totalPages) * 100}%`;
-                    const page = await pdfDocjs.getPage(i);
-                    const viewport = page.getViewport({ scale: settings.scale });
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    canvas.width = viewport.width; canvas.height = viewport.height;
-                    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-                    const imgDataUrl = canvas.toDataURL('image/jpeg', settings.quality);
-                    const jpgImage = await finalPdf.embedJpg(imgDataUrl);
-                    const originalViewport = page.getViewport({ scale: 1.0 });
-                    const newPage = finalPdf.addPage([originalViewport.width, originalViewport.height]);
-                    newPage.drawImage(jpgImage, { x: 0, y: 0, width: originalViewport.width, height: originalViewport.height });
-                    canvas.width = 0; canvas.height = 0;
-                }
-
-                rsStatus.innerText = 'กำลังบันทึกไฟล์ใหม่...';
-                rsProgFill.style.width = '95%';
-                const finalPdfBytes = await finalPdf.save({ useObjectStreams: true });
-                const blob = new Blob([finalPdfBytes], { type: 'application/pdf' });
-                const newMb = (blob.size / (1024 * 1024)).toFixed(2);
-                const oldMb = (rsOriginalFile.size / (1024 * 1024)).toFixed(2);
-                const percentSaved = Math.round((1 - (blob.size / rsOriginalFile.size)) * 100);
-                rsProgFill.style.width = '100%';
-                
-                if(blob.size > rsOriginalFile.size) {
-                    rsStatus.innerHTML = `<span style="color:var(--warning)">⚠️ เสร็จสิ้น! แต่ไฟล์ผลลัพธ์ใหญ่กว่าเดิม (${newMb} MB) แนะนำให้ลดเปอร์เซ็นต์ลงค่ะ</span>`;
-                } else {
-                    rsStatus.innerHTML = `<span style="color:var(--success)">✅ เสร็จสิ้น! รีดจาก ${oldMb} MB เหลือ ${newMb} MB (ลดลง ${percentSaved}%)</span>`;
-                }
-
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `PEO_Resized_${rsOriginalFile.name}`;
-                link.click();
-            } catch (error) {
-                console.error(error);
-                rsStatus.innerHTML = '<span style="color:var(--danger)">❌ เกิดข้อผิดพลาดในการประมวลผล</span>';
-            } finally {
-                rsBtn.disabled = false; rsInput.disabled = false;
-            }
-        });
-    })();
 
     window.onload = () => { updateFormatOptions(); saveHistory(); };
 </script>
