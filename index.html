@@ -38,7 +38,7 @@
         .btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .history-group { display: flex; gap: 4px; background: var(--border); padding: 4px; border-radius: 6px; }
         label { font-size:10px; font-weight:bold; margin-bottom: 3px; display: block; color: var(--text); text-transform: uppercase; }
-        .input-group { display:flex; flex-direction:column; flex: 1 1 auto; min-width: 100px; }
+        .input-group { display:flex; flex-direction:column; flex: 1 1 auto; min-width: 90px; }
         input[type="number"], select { padding:4px 8px; border-radius:6px; border:1px solid var(--border); height: 32px; box-sizing: border-box; width: 100%; font-size: 13px; background: var(--card-bg); color: var(--text); }
         .system-credit { font-size: 10px; color: #777; width: 100%; text-align: right; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-weight: 500; }
         #pdf-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
@@ -46,6 +46,7 @@
         .page-card:hover { border-color: var(--primary); }
         .canvas-wrapper { width: 100%; aspect-ratio: 1 / 1.4; background: #f8f9fa; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 4px; position: relative; }
         .page-card canvas { max-width: 100%; max-height: 100%; transition: transform 0.3s; }
+        
         .number-preview { position: absolute; color: #000000 !important; background: rgba(255, 255, 255, 0.9) !important; border: 1px dashed #000000 !important; padding: 2px 4px; font-size: 11px; pointer-events: none; display: none; z-index: 20; white-space: nowrap; }
         #zoom-number-preview { background: transparent !important; border: 1px dashed rgba(0, 0, 0, 0.5) !important; padding: 0; }
         .page-info { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; z-index: 10; }
@@ -54,7 +55,6 @@
         .toggle-print-label { grid-column: span 2; font-size: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 4px; border-radius: 4px; font-weight: bold; background: #e3f2fd; color: #0056b3; border: 1px solid #b6d4fe; }
         .toggle-print-label.disabled { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
         
-        /* Modal Style */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; padding: 20px; }
         .modal-box { background: var(--card-bg); color: var(--text); padding: 25px; border-radius: 12px; max-width: 500px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid var(--border); position: relative; }
         .modal-title { font-size: 18px; font-weight: bold; color: var(--danger); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
@@ -81,7 +81,7 @@
 
 <div id="alert-modal" class="modal-overlay">
     <div class="modal-box">
-        <div class="modal-title">⚠️ ไฟล์มีการป้องกันด้วยรหัสผ่าน</div>
+        <div class="modal-title">⚠️ แจ้งเตือนจากระบบ</div>
         <div id="alert-body" class="modal-body"></div>
         <div class="modal-footer">
             <button class="btn btn-primary" onclick="closeAlert()">ตกลง (เข้าใจแล้ว)</button>
@@ -90,7 +90,7 @@
 </div>
 
 <header class="system-header">
-    <img src="img/logo.png" alt="PEO Udon Logo" class="system-logo">
+    <img src="img/logo.png" alt="PEO Udon Logo" class="system-logo" onerror="this.style.display='none'">
     <h1 class="system-title">Udon Thani Provincial Education Office PDF Helper</h1>
 </header>
 
@@ -102,16 +102,16 @@
         </div>
 
         <div class="input-group">
-            <label>➕ เพิ่มไฟล์ PDF (หรือลากมาวาง):</label>
+            <label>➕ เพิ่มไฟล์ PDF:</label>
             <input type="file" id="file-upload" accept="application/pdf" multiple style="padding: 3px;">
         </div>
 
-        <div class="input-group">
+        <div class="input-group" style="width: 110px;">
             <label>📍 แทรกไฟล์ที่:</label>
             <select id="insert-pos"><option value="end">ต่อท้ายสุด</option></select>
         </div>
 
-        <div class="input-group" style="border-left: 1px solid var(--border); padding-left: 10px; flex: 0 0 auto;">
+        <div class="input-group" style="border-left: 1px solid var(--border); padding-left: 10px; width: 140px;">
             <label>สถานะการรันเลข:</label>
             <div style="display:flex; align-items:center; gap:6px; height:32px;">
                 <input type="checkbox" id="master-num-toggle" onchange="toggleMasterNumbering()" style="width:16px; height:16px; cursor:pointer;">
@@ -119,15 +119,20 @@
             </div>
         </div>
 
+        <div class="input-group" style="width: 80px;">
+            <label>เริ่มที่หน้า:</label>
+            <input type="number" id="start-num" value="1" min="1" oninput="updateFormatOptions(); saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+        </div>
+
         <div class="input-group" style="border-left: 1px solid var(--border); padding-left: 10px;">
             <label>รูปแบบตัวเลข:</label>
             <div style="display:flex; gap:4px;">
-                <select id="num-type" style="width: 100px;" onchange="updateFormatOptions()">
+                <select id="num-type" style="width: 85px;" onchange="updateFormatOptions()">
                     <option value="arabic">อารบิก</option>
                     <option value="thai" selected>เลขไทย</option>
                     <option value="thai-alpha">ก ข ค</option>
                 </select>
-                <select id="num-format" style="width: 130px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();"></select>
+                <select id="num-format" style="width: 110px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();"></select>
             </div>
         </div>
 
@@ -140,8 +145,8 @@
                     <option value="THSARABUNNEWITALIC.TTF">เอียง</option>
                     <option value="THSARABUNNEWBOLDITALIC.TTF">หนาเอียง</option>
                 </select>
-                <input type="number" id="font-size" value="16" style="width: 60px;" oninput="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
-                <select id="num-pos" style="width: 90px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+                <input type="number" id="font-size" value="16" style="width: 55px;" oninput="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+                <select id="num-pos" style="width: 80px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
                     <option value="TR" selected>ขวาบน</option>
                     <option value="TC">กลางบน</option>
                     <option value="BR">ขวาล่าง</option>
@@ -150,19 +155,18 @@
             </div>
         </div>
 
-        <div class="input-group" style="max-width: 220px;">
+        <div class="input-group" style="max-width: 170px;">
             <label style="display: flex; align-items: center; gap: 5px;">
                 ขยับตำแหน่ง 
-                <span style="background: #e3f2fd; color: #0056b3; padding: 2px 6px; border-radius: 4px; font-size: 9px; cursor: help; border: 1px solid #b6d4fe;" title="เทคนิค:&#10;ใส่เลขบวก หรือ ติดลบ เพื่อกะระยะทิศทาง&#10;↔️ แนวนอน: (+ ขยับขวา, - ขยับซ้าย)&#10;↕️ แนวตั้ง: (+ ขยับขึ้น, - ขยับลง)">💡 คำแนะนำ</span>
             </label>
             <div style="display:flex; gap:6px; align-items:center;">
-                <div style="display:flex; align-items:center; gap: 2px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; height: 32px;">
+                <div style="display:flex; align-items:center; gap: 2px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 4px; height: 32px;">
                     <span style="font-size:12px; cursor: help;" title="แนวนอน (+ ขยับขวา, - ขยับซ้าย)">↔️</span>
-                    <input type="number" id="offset-x" value="0" style="width: 55px; border: none; background: transparent; color: var(--text); padding: 0; text-align: center; outline: none; font-size: 13px;" oninput="if(isPreviewOpen) updatePreviewNumbers();" onchange="saveHistory();">
+                    <input type="number" id="offset-x" value="0" style="width: 45px; border: none; background: transparent; color: var(--text); padding: 0; text-align: center; outline: none; font-size: 13px;" oninput="if(isPreviewOpen) updatePreviewNumbers();" onchange="saveHistory();">
                 </div>
-                <div style="display:flex; align-items:center; gap: 2px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 6px; height: 32px;">
+                <div style="display:flex; align-items:center; gap: 2px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 4px; height: 32px;">
                     <span style="font-size:12px; cursor: help;" title="แนวตั้ง (+ ขยับขึ้น, - ขยับลง)">↕️</span>
-                    <input type="number" id="offset-y" value="0" style="width: 55px; border: none; background: transparent; color: var(--text); padding: 0; text-align: center; outline: none; font-size: 13px;" oninput="if(isPreviewOpen) updatePreviewNumbers();" onchange="saveHistory();">
+                    <input type="number" id="offset-y" value="0" style="width: 45px; border: none; background: transparent; color: var(--text); padding: 0; text-align: center; outline: none; font-size: 13px;" oninput="if(isPreviewOpen) updatePreviewNumbers();" onchange="saveHistory();">
                 </div>
             </div>
         </div>
@@ -204,7 +208,6 @@
         }
     }
 
-    // Custom Alert Logic
     function showAlert(msg) {
         document.getElementById('alert-body').innerText = msg;
         document.getElementById('alert-modal').style.display = 'flex';
@@ -226,28 +229,15 @@
     const loading = document.getElementById('loading');
     let isPreviewOpen = false;
 
-    // ระบบ Drag & Drop
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-        document.body.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        }, false);
+        document.body.addEventListener(eventName, (e) => { e.preventDefault(); e.stopPropagation(); }, false);
     });
 
-    document.body.addEventListener('dragover', () => {
-        document.body.classList.add('drag-over');
-    });
-    
-    document.body.addEventListener('dragleave', () => {
-        document.body.classList.remove('drag-over');
-    });
-
+    document.body.addEventListener('dragover', () => document.body.classList.add('drag-over'));
+    document.body.addEventListener('dragleave', () => document.body.classList.remove('drag-over'));
     document.body.addEventListener('drop', async (e) => {
         document.body.classList.remove('drag-over');
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            await handleFiles(files);
-        }
+        if (e.dataTransfer.files.length > 0) await handleFiles(e.dataTransfer.files);
     });
 
     let historyStack = [];
@@ -287,7 +277,9 @@
 
     function restoreState(json) {
         const state = JSON.parse(json);
+        Array.from(container.children).forEach(destroyCardMemory);
         container.innerHTML = '';
+        
         state.forEach(data => {
             const card = document.createElement('div');
             card.className = 'page-card';
@@ -335,9 +327,8 @@
             try {
                 pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
             } catch (err) {
-                // แก้ไข: ใช้ Modal แทน alert เพื่อให้แสดงข้อความได้ครบถ้วน
                 if (err.name === 'PasswordException' || err.message.includes('encrypted')) {
-                    showAlert(`ไฟล์ "${file.name}" มีการป้องกันด้วยรหัสผ่าน\n\nระบบไม่สามารถนำเข้าไฟล์ที่ล็อกรหัสผ่านได้โดยตรง\n\nวิธีแก้ไข:\n1. เปิดไฟล์ PDF นี้ด้วยโปรแกรม Google Chrome\n2. กรอกรหัสผ่านเพื่อเปิดไฟล์ให้เรียบร้อย\n3. กดปุ่มพิมพ์ (Print) หรือกด Ctrl + P\n4. เลือกเครื่องพิมพ์ (Destination) เป็น "Save as PDF" หรือ "บันทึกเป็น PDF"\n5. กดบันทึกเพื่อสร้างไฟล์ใหม่ที่ไม่มีรหัสผ่าน แล้วจึงนำไฟล์นั้นกลับมาใช้งานในระบบอีกครั้ง`);
+                    showAlert(`ไฟล์ "${file.name}" มีการป้องกันด้วยรหัสผ่าน\n\nระบบไม่สามารถนำเข้าไฟล์ที่ล็อกรหัสผ่านได้โดยตรง\n\nวิธีแก้ไข:\n1. เปิดไฟล์ PDF นี้ด้วยโปรแกรมเบราว์เซอร์\n2. กด Print และเลือก Save as PDF เพื่อถอดรหัสก่อนใช้งาน`);
                 } else {
                     showAlert(`เกิดข้อผิดพลาดในการเปิดไฟล์ "${file.name}": ${err.message}`);
                 }
@@ -375,13 +366,19 @@
         card.dataset.rotation = 0;
         card._pdfBytes = pdfBytes; card._originalIdx = pageNum - 1;
 
+        // ดึงสถานะปัจจุบันของ Master Toggle มาเป็นค่าเริ่มต้นให้กับเอกสารที่เพิ่งอัปโหลด
+        const isMasterEnabled = document.getElementById('master-num-toggle').checked;
+        const printChecked = isMasterEnabled ? 'checked' : '';
+        const printLabelClass = isMasterEnabled ? '' : 'disabled';
+        const printText = isMasterEnabled ? '🖨️ พิมพ์เลข' : '🚫 ซ่อนเลข';
+
         card.innerHTML = `
             <div class="page-info"></div>
             <div class="canvas-wrapper"><div class="number-preview"></div></div>
             <div class="controls">
-                <label class="toggle-print-label disabled">
-                    <input type="checkbox" class="toggle-print" style="margin:0;">
-                    <span>🚫 ซ่อนเลข</span>
+                <label class="toggle-print-label ${printLabelClass}">
+                    <input type="checkbox" class="toggle-print" style="margin:0;" ${printChecked}>
+                    <span>${printText}</span>
                 </label>
                 <button type="button" onclick="rotateCard(this.closest('.page-card'))">🔄 หมุน</button>
                 <button type="button" onclick="zoomCard(this.closest('.page-card'))">🔍 ขยาย</button>
@@ -402,6 +399,15 @@
         return card;
     }
 
+    function destroyCardMemory(card) {
+        const canvas = card.querySelector('canvas');
+        if (canvas) {
+            const ctx = canvas.getContext('2d');
+            if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvas.width = 0; canvas.height = 0;
+        }
+    }
+
     function rotateCard(card) {
         card.dataset.rotation = (parseInt(card.dataset.rotation) + 90) % 360;
         card.querySelector('canvas').style.transform = `rotate(${card.dataset.rotation}deg)`;
@@ -410,6 +416,7 @@
     }
 
     function deleteCard(card) {
+        destroyCardMemory(card);
         card.remove();
         updateAllBadges();
         saveHistory();
@@ -417,6 +424,7 @@
 
     document.getElementById('btn-clear').onclick = () => {
         if(confirm('ต้องการล้างหน้าเอกสารทั้งหมดใช่ไหมคะ?')) {
+            Array.from(container.children).forEach(destroyCardMemory);
             container.innerHTML = '';
             updateAllBadges();
             saveHistory();
@@ -449,9 +457,31 @@
         if (isEnabled) {
             textLabel.innerText = 'เปิดการรันเลข';
             textLabel.style.color = 'var(--success)';
+            
+            // Sync สวิตช์ย่อย: ให้ทุกหน้าเปลี่ยนสถานะเป็น 'พิมพ์เลข' ทันที
+            Array.from(container.children).forEach(card => {
+                const togglePrint = card.querySelector('.toggle-print');
+                const lbl = card.querySelector('.toggle-print-label');
+                if (!togglePrint.checked) {
+                    togglePrint.checked = true;
+                    lbl.classList.remove('disabled');
+                    lbl.querySelector('span').innerText = '🖨️ พิมพ์เลข';
+                }
+            });
         } else {
             textLabel.innerText = 'ปิดรันเลข (ต่อไฟล์เฉยๆ)';
             textLabel.style.color = 'var(--danger)';
+            
+            // Sync สวิตช์ย่อย: ให้ทุกหน้าเปลี่ยนสถานะเป็น 'ซ่อนเลข' ทันที
+            Array.from(container.children).forEach(card => {
+                const togglePrint = card.querySelector('.toggle-print');
+                const lbl = card.querySelector('.toggle-print-label');
+                if (togglePrint.checked) {
+                    togglePrint.checked = false;
+                    lbl.classList.add('disabled');
+                    lbl.querySelector('span').innerText = '🚫 ซ่อนเลข';
+                }
+            });
         }
 
         if(isPreviewOpen) updatePreviewNumbers();
@@ -463,6 +493,7 @@
         const type = document.getElementById('num-type').value;
         const format = document.getElementById('num-format').value || '{n}';
         const posType = document.getElementById('num-pos').value;
+        const startNum = parseInt(document.getElementById('start-num').value) || 1; 
         
         const fontStyleFile = document.getElementById('font-style').value;
         const isBold = fontStyleFile.includes('BOLD');
@@ -482,7 +513,9 @@
             }
 
             preview.style.display = 'block';
-            preview.innerText = getFormattedNumberText(i + 1, totalPages, type, format);
+            
+            const currentNumber = startNum + i;
+            preview.innerText = getFormattedNumberText(currentNumber, totalPages, type, format);
             
             preview.style.fontWeight = isBold ? 'bold' : 'normal';
             preview.style.fontStyle = isItalic ? 'italic' : 'normal';
@@ -520,16 +553,21 @@
             const isMasterEnabled = document.getElementById('master-num-toggle').checked;
             const needsFont = isMasterEnabled && Array.from(container.children).some(card => card.querySelector('.toggle-print').checked);
             let font = null;
+            
             if (needsFont) {
                 finalPdf.registerFontkit(fontkit);
                 const fontFileName = document.getElementById('font-style').value;
-                const fontBytes = await fetch('fonts/' + fontFileName).then(res => res.arrayBuffer());
+                const fontRes = await fetch('fonts/' + fontFileName);
+                if (!fontRes.ok) throw new Error(`ไม่พบไฟล์ฟอนต์ ${fontFileName} ในระบบ (Error ${fontRes.status})\nรบกวนตรวจสอบโฟลเดอร์ fonts/ บน Server ด้วยนะคะ`);
+                const fontBytes = await fontRes.arrayBuffer();
                 font = await finalPdf.embedFont(fontBytes);
             }
+            
             const type = document.getElementById('num-type').value;
             const format = document.getElementById('num-format').value;
             const posType = document.getElementById('num-pos').value;
             const fSize = parseInt(document.getElementById('font-size').value);
+            const startNum = parseInt(document.getElementById('start-num').value) || 1;
             const ox = parseInt(document.getElementById('offset-x').value) || 0;
             const oy = parseInt(document.getElementById('offset-y').value) || 0;
             const totalPages = container.children.length; 
@@ -544,7 +582,7 @@
 
                 if (isMasterEnabled && card.querySelector('.toggle-print').checked && font) {
                     const { width, height } = page.getSize();
-                    const text = getFormattedNumberText(i+1, totalPages, type, format); 
+                    const text = getFormattedNumberText(startNum + i, totalPages, type, format); 
                     const tw = font.widthOfTextAtSize(text, fSize);
                     let margin = 40;
                     const vW = (totalRot === 90 || totalRot === 270) ? height : width;
@@ -569,7 +607,7 @@
             a.click();
         } catch(e) { 
             console.error(e); 
-            showAlert(`เกิดข้อผิดพลาดในการประมวลผล: ${e.message}\n\nคำแนะนำ: หากไฟล์มีการล็อกรหัสผ่าน กรุณาใช้วิธี Print as PDF เพื่อถอดรหัสไฟล์ต้นฉบับก่อนใช้งานค่ะ`); 
+            showAlert(`เกิดข้อผิดพลาดในการประมวลผล:\n${e.message}`); 
         }
         loading.style.display = 'none';
     };
@@ -578,8 +616,20 @@
         const type = document.getElementById('num-type').value;
         const fmt = document.getElementById('num-format');
         const currentValue = fmt.value;
-        const p = (type === 'thai') ? '๑' : (type === 'thai-alpha' ? 'ก' : '1');
-        const t = (type === 'thai') ? '๙' : (type === 'thai-alpha' ? 'ฮ' : '9'); 
+        
+        const startNum = parseInt(document.getElementById('start-num').value) || 1;
+        let p = startNum.toString();
+        let t = (startNum + 8).toString(); 
+        
+        if (type === 'thai') {
+            p = p.replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
+            t = t.replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
+        } else if (type === 'thai-alpha') {
+            const alphabet = "กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสฬอฮ";
+            p = alphabet[(startNum-1) % alphabet.length];
+            t = alphabet[(startNum+8) % alphabet.length];
+        }
+
         fmt.innerHTML = `
             <option value="{n}">${p}</option>
             <option value="- {n} -">- ${p} -</option>
@@ -621,16 +671,20 @@
                 const baseFontSize = parseInt(document.getElementById('font-size').value) || 16;
                 const paddingEdge = 60; 
                 const totalPages = container.children.length;
-                const pageIndex = Array.from(container.children).indexOf(card) + 1;
-                zoomPreview.innerText = getFormattedNumberText(pageIndex, totalPages, type, format);
+                const startNum = parseInt(document.getElementById('start-num').value) || 1; 
+                const pageIndex = Array.from(container.children).indexOf(card);
+                
+                zoomPreview.innerText = getFormattedNumberText(startNum + pageIndex, totalPages, type, format);
                 zoomPreview.style.fontWeight = isBold ? 'bold' : 'normal';
                 zoomPreview.style.fontStyle = isItalic ? 'italic' : 'normal';
                 zoomPreview.style.fontSize = (baseFontSize * 1.5) + 'px'; 
+                
                 zoomPreview.style.top = 'auto'; zoomPreview.style.bottom = 'auto'; zoomPreview.style.left = 'auto'; zoomPreview.style.right = 'auto'; zoomPreview.style.transform = 'none';
                 if(posType === 'TR') { zoomPreview.style.top = (paddingEdge - oy)+'px'; zoomPreview.style.right = (paddingEdge - ox)+'px'; }
                 else if(posType === 'TC') { zoomPreview.style.top = (paddingEdge - oy)+'px'; zoomPreview.style.left = '50%'; zoomPreview.style.transform = `translateX(calc(-50% + ${ox}px))`; }
                 else if(posType === 'BR') { zoomPreview.style.bottom = (paddingEdge + oy)+'px'; zoomPreview.style.right = (paddingEdge - ox)+'px'; }
                 else if(posType === 'BC') { zoomPreview.style.bottom = (paddingEdge + oy)+'px'; zoomPreview.style.left = '50%'; zoomPreview.style.transform = `translateX(calc(-50% + ${ox}px))`; }
+                
                 zoomPreview.style.display = 'block';
             }
         } catch (e) {
