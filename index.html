@@ -3,71 +3,114 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Udon Thani Provincial Education Office PDF Helper</title>
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
     <script src="https://unpkg.com/@pdf-lib/fontkit@0.0.4/dist/fontkit.umd.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
     <style>
         :root { 
-            --primary: #0056b3; --success: #28a745; --danger: #dc3545; 
+            --primary: #0056b3; --primary-hover: #004494;
+            --success: #28a745; --danger: #dc3545; 
             --bg: #f0f2f5; --card-bg: #ffffff; --text: #333333; --border: #dddddd;
-            --critical: #8b0000; --warning: #ffc107;
+            --critical: #8b0000; --warning: #ffc107; --info: #17a2b8;
+            --loading-bg: rgba(255, 255, 255, 0.90);
         }
         [data-theme="dark"] {
             --bg: #1a1a1a; --card-bg: #2d2d2d; --text: #f0f0f0; --border: #444444;
-            --primary: #3793ff;
+            --primary: #3793ff; --primary-hover: #1e7eff;
+            --loading-bg: rgba(26, 26, 26, 0.94);
         }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; transition: 0.3s; min-height: 100vh; }
         .system-header { display: flex; align-items: center; gap: 10px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
         .system-logo { height: 40px; width: auto; object-fit: contain; }
         .system-title { font-size: 18px; font-weight: bold; color: var(--primary); margin: 0; }
+        
         .toolbar { 
             background: var(--card-bg); padding: 12px 15px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.05); 
-            margin-bottom: 20px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; position: sticky; top: 15px; z-index: 100;
+            margin-bottom: 15px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; position: sticky; top: 15px; z-index: 100;
             border: 1px solid var(--border);
         }
-        .btn { padding: 4px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; display: flex; align-items: center; gap: 4px; height: 32px; white-space: nowrap; }
+        .btn { padding: 4px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; display: flex; align-items: center; gap: 4px; height: 32px; white-space: nowrap; user-select: none; }
         .btn-primary { background: var(--primary); color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
         .btn-success { background: var(--success); color: white; }
         .btn-danger { background: var(--danger); color: white; }
+        .btn-info { background: var(--info); color: white; }
+        .btn-warning { background: var(--warning); color: #212529; }
         .btn-critical { background: var(--critical) !important; color: #ffffff !important; border: 2px solid #ff4500 !important; font-weight: 800 !important; grid-column: span 2; margin-top: 5px; }
         .btn:hover { opacity: 0.9; transform: translateY(-1px); }
-        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+        
         .history-group { display: flex; gap: 4px; background: var(--border); padding: 4px; border-radius: 6px; }
-        label { font-size:10px; font-weight:bold; margin-bottom: 3px; display: block; color: var(--text); text-transform: uppercase; }
-        .input-group { display:flex; flex-direction:column; flex: 1 1 auto; min-width: 90px; }
-        input[type="number"], select { padding:4px 8px; border-radius:6px; border:1px solid var(--border); height: 32px; box-sizing: border-box; width: 100%; font-size: 13px; background: var(--card-bg); color: var(--text); }
+        label { font-size: 10px; font-weight: bold; margin-bottom: 3px; display: block; color: var(--text); text-transform: uppercase; }
+        .input-group { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 90px; }
+        input[type="number"], input[type="text"], input[type="date"], input[type="time"], select { 
+            padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border); height: 32px; box-sizing: border-box; width: 100%; font-size: 13px; background: var(--card-bg); color: var(--text); 
+        }
+        
         .system-credit { font-size: 10px; color: #777; width: 100%; text-align: right; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-weight: 500; }
         #pdf-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
-        .page-card { background: var(--card-bg); padding: 8px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); position: relative; display: flex; flex-direction: column; cursor: grab; border: 2px solid var(--border); }
+        
+        .page-card { background: var(--card-bg); padding: 8px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); position: relative; display: flex; flex-direction: column; cursor: grab; border: 2px solid var(--border); user-select: none; }
         .page-card:hover { border-color: var(--primary); }
+        .page-card.blank-card { border-style: dashed; background: rgba(0, 86, 179, 0.03); }
         .canvas-wrapper { width: 100%; aspect-ratio: 1 / 1.4; background: #f8f9fa; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 4px; position: relative; }
         .page-card canvas { max-width: 100%; max-height: 100%; transition: transform 0.3s; }
         
-        .number-preview { position: absolute; color: #000000 !important; background: rgba(255, 255, 255, 0.9) !important; border: 1px dashed #000000 !important; padding: 2px 4px; font-size: 11px; pointer-events: none; display: none; z-index: 20; white-space: nowrap; }
+        .number-preview { position: absolute; color: #000000 !important; background: rgba(255, 255, 255, 0.92) !important; border: 1px dashed #000000 !important; padding: 2px 4px; font-size: 11px; pointer-events: none; display: none; z-index: 20; white-space: nowrap; line-height: 1.1; }
         #zoom-number-preview { background: transparent !important; border: 1px dashed rgba(0, 0, 0, 0.5) !important; padding: 0; }
         .page-info { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; z-index: 10; }
+        .page-badge-extra { position: absolute; top: 4px; right: 4px; background: var(--info); color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; z-index: 10; }
         .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 8px; }
         .controls button { padding: 4px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); border-radius: 4px; }
         .toggle-print-label { grid-column: span 2; font-size: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 4px; border-radius: 4px; font-weight: bold; background: #e3f2fd; color: #0056b3; border: 1px solid #b6d4fe; }
         .toggle-print-label.disabled { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
         
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; padding: 20px; }
-        .modal-box { background: var(--card-bg); color: var(--text); padding: 25px; border-radius: 12px; max-width: 500px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid var(--border); position: relative; }
-        .modal-title { font-size: 18px; font-weight: bold; color: var(--danger); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
-        .modal-body { font-size: 14px; line-height: 1.6; white-space: pre-wrap; margin-bottom: 20px; }
-        .modal-footer { display: flex; justify-content: flex-end; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        .modal-box { background: var(--card-bg); color: var(--text); padding: 20px 24px; border-radius: 12px; max-width: 540px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid var(--border); position: relative; max-height: 90vh; overflow-y: auto; }
+        .modal-title { font-size: 17px; font-weight: bold; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .modal-body { font-size: 13.5px; line-height: 1.6; margin-bottom: 16px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 8px; }
         
         #zoom-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
         #zoom-content { background: var(--card-bg); padding: 10px; border-radius: 8px; position: relative; max-width: 95vw; max-height: 95vh; display: flex; flex-direction: column; border: 1px solid var(--border); overflow: hidden; }
         .close-modal { position: absolute; top: -15px; right: -15px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; z-index: 100; }
         #zoom-canvas { max-width: 100%; max-height: calc(95vh - 20px); object-fit: contain; }
-        #loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); align-items: center; justify-content: center; z-index: 2000; flex-direction: column; }
+        
+        #loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--loading-bg); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 2000; flex-direction: column; }
         .theme-switch { position: fixed; top: 15px; right: 15px; z-index: 9999; background: var(--primary); color: white; border: none; padding: 6px 12px; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); font-weight: bold; font-size: 11px; }
         body.drag-over { outline: 5px dashed var(--primary); outline-offset: -10px; background: rgba(0, 86, 179, 0.1); }
+        
+        /* Accordion / Tool Panel */
+        .advanced-bar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        .adv-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+        .adv-title { font-size: 13.5px; font-weight: bold; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        .adv-content { display: block; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
+        .adv-content.collapsed { display: none; }
+        .adv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+        .adv-card { background: var(--bg); padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border); }
+        .adv-card-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; color: var(--primary); display: flex; align-items: center; gap: 6px; }
+        .form-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+        .form-row label { min-width: 65px; margin: 0; font-size: 11px; text-transform: none; }
+
+        /* Manual Modal Styles */
+        .manual-modal-box { max-width: 860px; width: 95%; max-height: 88vh; padding: 24px; border-radius: 14px; }
+        .manual-container { font-size: 13.5px; line-height: 1.7; color: var(--text); }
+        .manual-section { margin-bottom: 24px; background: var(--bg); padding: 14px 18px; border-radius: 10px; border-left: 4px solid var(--primary); }
+        .manual-section h3 { margin: 0 0 10px 0; font-size: 15px; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        .manual-step { margin-bottom: 10px; padding-left: 6px; }
+        .manual-step-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: var(--primary); color: white; border-radius: 50%; font-size: 11px; font-weight: bold; margin-right: 6px; }
+        .manual-tip { background: #e8f4fd; border: 1px solid #b6d4fe; color: #004085; padding: 8px 12px; border-radius: 6px; font-size: 12.5px; margin-top: 8px; }
+        [data-theme="dark"] .manual-tip { background: #1e3a5a; border-color: #2b527d; color: #d0e4ff; }
+        .manual-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12.5px; }
+        .manual-table th, .manual-table td { border: 1px solid var(--border); padding: 6px 10px; text-align: left; }
+        .manual-table th { background: var(--card-bg); font-weight: bold; }
     </style>
 </head>
 <body>
@@ -75,16 +118,17 @@
 <button class="theme-switch" onclick="toggleTheme()" id="theme-btn">🌙 Dark Mode</button>
 
 <div id="loading">
-    <div style="font-size: 24px; margin-bottom: 10px; color: #0056b3; font-weight: bold;">⏳ น้องยูดีกำลังจัดการให้ค่ะ...</div>
-    <div id="loading-status">โปรดรอสักครู่</div>
+    <div style="font-size: 24px; margin-bottom: 10px; color: var(--primary); font-weight: bold;">⏳ น้องยูดีกำลังจัดการให้ค่ะ...</div>
+    <div id="loading-status" style="font-size: 15px; font-weight: 500;">โปรดรอสักครู่</div>
 </div>
 
 <div id="alert-modal" class="modal-overlay">
     <div class="modal-box">
-        <div class="modal-title">⚠️ แจ้งเตือนจากระบบ</div>
+        <div id="alert-title" class="modal-title">⚠️ แจ้งเตือนจากระบบ</div>
         <div id="alert-body" class="modal-body"></div>
         <div class="modal-footer">
-            <button class="btn btn-primary" onclick="closeAlert()">ตกลง (เข้าใจแล้ว)</button>
+            <button id="alert-btn-cancel" class="btn btn-secondary" style="display:none;" onclick="closeAlert(false)">ยกเลิก</button>
+            <button id="alert-btn-ok" class="btn btn-primary" onclick="closeAlert(true)">ตกลง</button>
         </div>
     </div>
 </div>
@@ -92,18 +136,21 @@
 <header class="system-header">
     <img src="img/logo.png" alt="PEO Udon Logo" class="system-logo" onerror="this.style.display='none'">
     <h1 class="system-title">Udon Thani Provincial Education Office PDF Helper</h1>
+    <span style="font-size:11px; background:var(--success); color:white; padding:3px 10px; border-radius:12px; font-weight:bold; margin-left:auto;">v1.5.0 สารบรรณ</span>
+    <button type="button" class="btn btn-warning" style="font-size:12px; height:28px; padding:2px 10px;" onclick="openManualModal()">📖 คู่มือการใช้งานราชการ</button>
 </header>
 
 <div id="main-content">
+    <!-- Main Toolbar -->
     <div class="toolbar">
         <div class="history-group">
-            <button id="btn-undo" class="btn" title="Undo" disabled>↩️</button>
-            <button id="btn-redo" class="btn" title="Redo" disabled>↪️</button>
+            <button id="btn-undo" class="btn" title="ย้อนกลับ (Undo)" disabled>↩️</button>
+            <button id="btn-redo" class="btn" title="ทำซ้ำ (Redo)" disabled>↪️</button>
         </div>
 
         <div class="input-group">
-            <label>➕ เพิ่มไฟล์ PDF:</label>
-            <input type="file" id="file-upload" accept="application/pdf" multiple style="padding: 3px;">
+            <label>➕ เพิ่มไฟล์ PDF / รูปภาพ:</label>
+            <input type="file" id="file-upload" accept="application/pdf,image/png,image/jpeg,image/jpg" multiple style="padding: 3px;">
         </div>
 
         <div class="input-group" style="width: 110px;">
@@ -121,32 +168,32 @@
 
         <div class="input-group" style="width: 80px;">
             <label>เริ่มที่หน้า:</label>
-            <input type="number" id="start-num" value="1" min="1" oninput="updateFormatOptions(); saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+            <input type="number" id="start-num" value="1" min="1" oninput="updateFormatOptions(); if(isPreviewOpen) updatePreviewNumbers();">
         </div>
 
         <div class="input-group" style="border-left: 1px solid var(--border); padding-left: 10px;">
             <label>รูปแบบตัวเลข:</label>
             <div style="display:flex; gap:4px;">
-                <select id="num-type" style="width: 85px;" onchange="updateFormatOptions()">
+                <select id="num-type" style="width: 85px;" onchange="updateFormatOptions(); saveSettings();">
                     <option value="arabic">อารบิก</option>
                     <option value="thai" selected>เลขไทย</option>
                     <option value="thai-alpha">ก ข ค</option>
                 </select>
-                <select id="num-format" style="width: 110px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();"></select>
+                <select id="num-format" style="width: 110px;" onchange="saveSettings(); if(isPreviewOpen) updatePreviewNumbers();"></select>
             </div>
         </div>
 
         <div class="input-group">
             <label>ฟอนต์ / ขนาด / ตำแหน่ง:</label>
             <div style="display:flex; gap:4px;">
-                <select id="font-style" style="width: 90px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+                <select id="font-style" style="width: 90px;" onchange="saveSettings(); if(isPreviewOpen) updatePreviewNumbers();">
                     <option value="THSARABUNNEW.TTF" selected>ปกติ</option>
                     <option value="THSARABUNNEWBOLD.TTF">หนา</option>
                     <option value="THSARABUNNEWITALIC.TTF">เอียง</option>
                     <option value="THSARABUNNEWBOLDITALIC.TTF">หนาเอียง</option>
                 </select>
-                <input type="number" id="font-size" value="16" style="width: 55px;" oninput="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
-                <select id="num-pos" style="width: 80px;" onchange="saveHistory(); if(isPreviewOpen) updatePreviewNumbers();">
+                <input type="number" id="font-size" value="16" min="8" max="72" style="width: 55px;" oninput="saveSettings(); if(isPreviewOpen) updatePreviewNumbers();">
+                <select id="num-pos" style="width: 80px;" onchange="saveSettings(); if(isPreviewOpen) updatePreviewNumbers();">
                     <option value="TR" selected>ขวาบน</option>
                     <option value="TC">กลางบน</option>
                     <option value="BR">ขวาล่าง</option>
@@ -156,17 +203,15 @@
         </div>
 
         <div class="input-group" style="max-width: 170px;">
-            <label style="display: flex; align-items: center; gap: 5px;">
-                ขยับตำแหน่ง 
-            </label>
+            <label>ขยับตำแหน่ง</label>
             <div style="display:flex; gap:6px; align-items:center;">
                 <div style="display:flex; align-items:center; gap: 2px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 4px; height: 32px;">
                     <span style="font-size:12px; cursor: help;" title="แนวนอน (+ ขยับขวา, - ขยับซ้าย)">↔️</span>
-                    <input type="number" id="offset-x" value="0" style="width: 45px; border: none; background: transparent; color: var(--text); padding: 0; text-align: center; outline: none; font-size: 13px;" oninput="if(isPreviewOpen) updatePreviewNumbers();" onchange="saveHistory();">
+                    <input type="number" id="offset-x" value="0" style="width: 45px; border: none; background: transparent; color: var(--text); padding: 0; text-align: center; outline: none; font-size: 13px;" oninput="if(isPreviewOpen) updatePreviewNumbers();" onchange="saveSettings();">
                 </div>
                 <div style="display:flex; align-items:center; gap: 2px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 4px; height: 32px;">
                     <span style="font-size:12px; cursor: help;" title="แนวตั้ง (+ ขยับขึ้น, - ขยับลง)">↕️</span>
-                    <input type="number" id="offset-y" value="0" style="width: 45px; border: none; background: transparent; color: var(--text); padding: 0; text-align: center; outline: none; font-size: 13px;" oninput="if(isPreviewOpen) updatePreviewNumbers();" onchange="saveHistory();">
+                    <input type="number" id="offset-y" value="0" style="width: 45px; border: none; background: transparent; color: var(--text); padding: 0; text-align: center; outline: none; font-size: 13px;" oninput="if(isPreviewOpen) updatePreviewNumbers();" onchange="saveSettings();">
                 </div>
             </div>
         </div>
@@ -182,7 +227,299 @@
         </div>
     </div>
 
+    <!-- Group B Advanced Features Panel -->
+    <div class="advanced-bar">
+        <div class="adv-header" onclick="toggleAdvancedPanel()">
+            <div class="adv-title">
+                <span>🏛️ เครื่องมืองานสารบรรณและลูกเล่นเพิ่มเติม (กลุ่ม B)</span>
+                <span id="adv-badge" style="font-size:11px; background:#e3f2fd; color:#0056b3; padding:2px 8px; border-radius:12px; font-weight:normal;">คลิกเพื่อย่อ/ขยาย</span>
+            </div>
+            <div id="adv-arrow" style="font-size: 14px; color: var(--primary);">▲</div>
+        </div>
+
+        <div id="adv-content" class="adv-content">
+            <div class="adv-grid">
+                <!-- F7: ประทับเลขรับ / ตรายางสารบรรณ -->
+                <div class="adv-card">
+                    <div class="adv-card-title">
+                        <span>📥 ประทับเลขรับ / ตรายางสารบรรณ (F7)</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                        <input type="checkbox" id="stamp-enable" onchange="saveSettings();">
+                        <label for="stamp-enable" style="margin:0; font-size:12px; cursor:pointer; color:var(--primary);">เปิดใช้งานตรายางรับหนังสือ</label>
+                    </div>
+                    <div class="form-row">
+                        <label>สังกัด/กลุ่ม:</label>
+                        <input type="text" id="stamp-dept" value="ศธจ.อุดรธานี" style="height:28px;" onchange="saveSettings();">
+                    </div>
+                    <div class="form-row">
+                        <label>เลขที่รับ:</label>
+                        <input type="text" id="stamp-no" placeholder="เช่น ๑๒๓/๒๕๖๙" style="height:28px;" onchange="saveSettings();">
+                    </div>
+                    <div class="form-row">
+                        <label>วันที่:</label>
+                        <input type="text" id="stamp-date" placeholder="เช่น ๙ พ.ย. ๒๕๖๙" style="height:28px;" onchange="saveSettings();">
+                    </div>
+                    <div class="form-row">
+                        <label>เวลา:</label>
+                        <input type="text" id="stamp-time" placeholder="เช่น ๐๙:๓๐ น." style="height:28px;" onchange="saveSettings();">
+                    </div>
+                    <div class="form-row">
+                        <label>ประทับที่:</label>
+                        <select id="stamp-page" style="height:28px; width:110px;">
+                            <option value="first">หน้าแรกเท่านั้น</option>
+                            <option value="all">ทุกหน้า</option>
+                        </select>
+                        <select id="stamp-pos" style="height:28px;">
+                            <option value="TR">ขวาบน</option>
+                            <option value="TL">ซ้ายบน</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- F8: ลายน้ำ Watermark -->
+                <div class="adv-card">
+                    <div class="adv-card-title">
+                        <span>🛡️ ประทับลายน้ำเอกสาร (F8)</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                        <input type="checkbox" id="wm-enable" onchange="saveSettings();">
+                        <label for="wm-enable" style="margin:0; font-size:12px; cursor:pointer; color:var(--primary);">เปิดประทับลายน้ำ (Watermark)</label>
+                    </div>
+                    <div class="form-row">
+                        <label>ข้อความ:</label>
+                        <input type="text" id="wm-text" value="สำเนาถูกต้อง" style="height:28px;" onchange="saveSettings();">
+                    </div>
+                    <div class="form-row">
+                        <label>เทมเพลต:</label>
+                        <select style="height:28px;" onchange="document.getElementById('wm-text').value=this.value; saveSettings();">
+                            <option value="">-- เลือกข้อความสำเร็จรูป --</option>
+                            <option value="สำเนาถูกต้อง">สำเนาถูกต้อง</option>
+                            <option value="เอกสารราชการลับ">เอกสารราชการลับ</option>
+                            <option value="ร่าง - ห้ามเผยแพร่">ร่าง - ห้ามเผยแพร่</option>
+                            <option value="ใช้เพื่อการพิจารณาเท่านั้น">ใช้เพื่อการพิจารณาเท่านั้น</option>
+                            <option value="สำนักงานศึกษาธิการจังหวัดอุดรธานี">ศธจ.อุดรธานี</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label>ขนาด / สี:</label>
+                        <input type="number" id="wm-size" value="50" min="20" max="100" style="height:28px; width:70px;" onchange="saveSettings();">
+                        <select id="wm-color" style="height:28px;">
+                            <option value="red">สีแดง (โปร่งแสง)</option>
+                            <option value="gray">สีเทา (โปร่งแสง)</option>
+                            <option value="blue">สีน้ำเงิน (โปร่งแสง)</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label>มุมเอียง:</label>
+                        <select id="wm-angle" style="height:28px;">
+                            <option value="45">เฉียง 45 องศา</option>
+                            <option value="0">แนวนอน 0 องศา</option>
+                            <option value="-45">เฉียง -45 องศา</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- F10 & F9: แทรกหน้าว่าง + แทรกรูป -->
+                <div class="adv-card">
+                    <div class="adv-card-title">
+                        <span>📄 แทรกหน้าว่าง / หน้าคั่น (F10)</span>
+                    </div>
+                    <p style="font-size:11.5px; color:#666; margin:0 0 8px 0;">เหมาะสำหรับเอกสารพิมพ์หน้า-หลัง หรือแทรกใบปะหน้าคั่นระหว่างเล่ม</p>
+                    <div class="form-row">
+                        <button type="button" class="btn btn-primary" style="height:30px; font-size:12px;" onclick="insertBlankPage()">➕ แทรกหน้าว่าง A4</button>
+                    </div>
+                    <hr style="border:0; border-top:1px dashed var(--border); margin:10px 0;">
+                    <div class="adv-card-title">
+                        <span>🖼️ แปลงรูปภาพเป็น PDF (F9)</span>
+                    </div>
+                    <p style="font-size:11.5px; color:#666; margin:0 0 8px 0;">รองรับไฟล์ JPG / PNG แทรกเข้าชุดเอกสารและรันเลขหน้าได้ทันที</p>
+                    <label class="btn btn-info" style="display:inline-flex; width:fit-content; cursor:pointer; height:28px; font-size:12px;">
+                        📷 เลือกรูปภาพแทรก...
+                        <input type="file" id="image-upload" accept="image/png,image/jpeg,image/jpg" multiple style="display:none;" onchange="handleImageUpload(this.files)">
+                    </label>
+                </div>
+
+                <!-- F11 & F12: แยกไฟล์ Split + ช่วงเลขหน้าแยกส่วน -->
+                <div class="adv-card">
+                    <div class="adv-card-title">
+                        <span>✂️ แยกช่วงหน้า / ตัดแบ่งไฟล์ (F11)</span>
+                    </div>
+                    <div class="form-row">
+                        <label>ช่วงหน้า:</label>
+                        <input type="text" id="split-range" placeholder="เช่น 1-5, 8, 11-14" style="height:28px;">
+                    </div>
+                    <div class="form-row">
+                        <button type="button" class="btn btn-secondary" style="height:28px; font-size:11.5px;" onclick="extractPages()">💾 ดาวน์โหลดเฉพาะช่วงนี้</button>
+                    </div>
+                    <hr style="border:0; border-top:1px dashed var(--border); margin:10px 0;">
+                    <div class="adv-card-title">
+                        <span>🔢 ข้ามหน้าไม่นับเลข (F12)</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <input type="checkbox" id="skip-unprinted-count" onchange="if(isPreviewOpen) updatePreviewNumbers(); saveSettings();">
+                        <label for="skip-unprinted-count" style="margin:0; font-size:11.5px; cursor:pointer;">หน้าที่ "ซ่อนเลข" ไม่ให้นับสะสม (ข้ามไปนับ 1 ในหน้าที่เริ่มพิมพ์)</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PDF Pages Grid Container -->
     <div id="pdf-container"></div>
+</div>
+
+<!-- Official Government User Manual Modal -->
+<div id="manual-modal" class="modal-overlay" onclick="if(event.target === this) closeManualModal()">
+    <div class="modal-box manual-modal-box">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; border-bottom:2px solid var(--border); padding-bottom:8px;">
+            <div class="modal-title" style="margin:0; font-size:18px;">
+                🏛️ คู่มือการใช้งานระบบ PEO PDF Helper (ฉบับทางการสำหรับหน่วยงานราชการ)
+            </div>
+            <button type="button" class="btn btn-secondary" style="height:28px; padding:2px 8px;" onclick="closeManualModal()">✖ ปิด</button>
+        </div>
+        
+        <div class="manual-container">
+            <!-- 0. ข้อมูลทั่วไปและความปลอดภัย -->
+            <div class="manual-section" style="border-left-color: #28a745;">
+                <h3>🛡️ 1. ความปลอดภัยของข้อมูลเอกสารราชการ (Data Privacy & Security)</h3>
+                <p style="margin:0 0 6px 0;">ระบบนี้ได้รับการออกแบบตามหลักธรรมาภิบาลข้อมูลภาครัฐ โดยทำงานแบบ <b>Client-side Processing 100%</b> ผ่านเว็บเบราว์เซอร์:</p>
+                <ul style="margin:0 0 6px 20px; padding:0;">
+                    <li><b>ไม่ส่งไฟล์ขึ้น Server:</b> ไฟล์เอกสาร หนังสือราชการ และรูปภาพที่นำเข้า จะประมวลผลอยู่เฉพาะในหน่วยความจำ (RAM) ของเครื่องคอมพิวเตอร์ผู้ใช้งานเท่านั้น</li>
+                    <li><b>ความลับไม่รั่วไหล:</b> ปลอดภัยสำหรับการรวมเอกสารลับ เอกสารทางการเงิน และข้อมูลส่วนบุคคล (PDPA)</li>
+                    <li><b>ใช้งานออฟไลน์ได้:</b> เมื่อโหลดหน้าเว็บเสร็จสมบูรณ์ สามารถตัดอินเทอร์เน็ตแล้วทำงานต่อได้ทันที</li>
+                </ul>
+            </div>
+
+            <!-- 2. ขั้นตอนการนำเข้าไฟล์ -->
+            <div class="manual-section">
+                <h3>📂 2. ขั้นตอนการนำเข้าไฟล์เอกสารและรูปภาพ (Step-by-Step)</h3>
+                <div class="manual-step">
+                    <span class="manual-step-num">1</span> <b>เลือกตำแหน่งแทรก:</b> ที่ช่อง <code>📍 แทรกไฟล์ที่:</code> เลือกว่าต้องการนำไฟล์ใหม่ไปไว้ <i>"ต่อท้ายสุด"</i> หรือแทรกคั่นหลังหน้าที่กำหนด
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">2</span> <b>นำเข้าไฟล์:</b> ทำได้ 2 วิธี
+                    <ul>
+                        <li>กดปุ่ม <code>➕ เพิ่มไฟล์ PDF / รูปภาพ</code> แล้วเลือกไฟล์จากคอมพิวเตอร์ (เลือกพร้อมกันได้หลายไฟล์)</li>
+                        <li>หรือ <b>ลากไฟล์ (Drag & Drop)</b> จากโฟลเดอร์ในเครื่องมาปล่อยลงบนหน้าต่างโปรแกรมได้โดยตรง</li>
+                    </ul>
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">3</span> <b>การแทรกรูปภาพ (JPG/PNG):</b> ระบบจะแปลงภาพถ่ายใบเสร็จ หนังสือรับรอง หรือภาพสแกน ให้เป็นหน้ากระดาษ A4 มาตรฐานให้อัตโนมัติ
+                </div>
+                <div class="manual-tip">
+                    💡 <b>คำแนะนำ:</b> หากระบบแจ้งเตือนว่าไฟล์ติดรหัสผ่าน ให้เปิดไฟล์ด้วยเบราว์เซอร์ แล้วกดสั่งพิมพ์ (Print) เลือก <i>"Save as PDF"</i> เพื่อถอดรหัสก่อนนำเข้าค่ะ
+                </div>
+            </div>
+
+            <!-- 3. การจัดเรียงและจัดการหน้า -->
+            <div class="manual-section">
+                <h3>📑 3. ขั้นตอนการจัดเรียง หมุน และลบหน้าเอกสาร</h3>
+                <div class="manual-step">
+                    <span class="manual-step-num">1</span> <b>สลับลำดับหน้า:</b> คลิกเมาส์ค้างที่การ์ดหน้าเอกสาร แล้ว <b>ลากและวาง (Drag & Drop)</b> เพื่อสลับตำแหน่งได้ตามต้องการ เลขลำดับจะอัปเดตให้อัตโนมัติ
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">2</span> <b>หมุนหน้าเอกสาร:</b> กดปุ่ม <code>🔄 หมุน</code> บนการ์ด เพื่อหมุนหน้าแนวนอน/แนวตั้งครั้งละ 90 องศา
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">3</span> <b>ตรวจสอบความชัดเจน:</b> กดปุ่ม <code>🔍 ขยาย</code> เพื่อเปิดดูเนื้อหาเอกสารขนาดใหญ่แบบละเอียด
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">4</span> <b>ลบหน้าที่ไม่ใช้:</b> กดปุ่มสีแดง <code>🗑️ ลบ</code> เพื่อนำหน้านั้นออกจากชุดเอกสาร
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">5</span> <b>การย้อนกลับ (Undo/Redo):</b> หากลบผิดหรือหมุนผิด สามารถกดปุ่ม <code>↩️ Undo</code> หรือ <code>↪️ Redo</code> เพื่อย้อนกลับได้ตลอดเวลา
+                </div>
+            </div>
+
+            <!-- 4. การตั้งค่ารันเลขหน้าสารบรรณ -->
+            <div class="manual-section">
+                <h3>🔢 4. ขั้นตอนการตั้งค่ารันเลขหน้าหนังสือราชการ</h3>
+                <div class="manual-step">
+                    <span class="manual-step-num">1</span> <b>เปิดระบบรันเลข:</b> ติ๊กถูกที่ช่อง <code>สถานะการรันเลข</code> ให้เป็นสีเขียว <i>"เปิดการรันเลข"</i> (หากต้องการแค่รวมไฟล์โดยไม่ใส่เลขหน้า ให้เอาติ๊กออก)
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">2</span> <b>กำหนดเลขหน้าเริ่มต้น:</b> ช่อง <code>เริ่มที่หน้า</code> ใส่เลขที่ต้องการให้เริ่มนับ เช่น เริ่มหน้า 1 หรือเริ่มหน้าที่ 15 ของเล่ม
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">3</span> <b>เลือกรูปแบบตัวเลขราชการ:</b>
+                    <table class="manual-table">
+                        <tr><th>ตัวเลือก</th><th>รูปแบบตัวอย่าง</th><th>ลักษณะการใช้งานราชการ</th></tr>
+                        <tr><td><b>เลขไทย</b></td><td>๑, - ๑ -, หน้า ๑, หน้า ๑ / ๙</td><td>หนังสือราชการทางการ, ระเบียบ, คำสั่ง, ประกาศ</td></tr>
+                        <tr><td><b>อารบิก</b></td><td>1, - 1 -, หน้า 1, หน้า 1 / 9</td><td>รายงานการเงิน, ตารางข้อมูล, เอกสารทั่วไป</td></tr>
+                        <tr><td><b>ก ข ค</b></td><td>ก, - ก -, หน้า ก, (ก)</td><td>ส่วนนำ, สารบัญ, คำนำ, ภาคผนวก</td></tr>
+                    </table>
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">4</span> <b>เลือกฟอนต์และขนาด:</b> ใช้ฟอนต์มาตรฐาน <b>TH Sarabun New</b> ขนาดแนะนำคือ 16pt (สามารถเลือกสไตล์ หนา หรือ เอียง ได้)
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">5</span> <b>ตำแหน่งและการหลบมุม:</b> เลือกตำแหน่ง (ปกติแนะนำ <i>ขวาบน</i>) และสามารถใส่ค่าในช่อง <code>ขยับตำแหน่ง ↔️ ↕️</code> เพื่อเลื่อนหลบตราประทับหรือหัวกระดาษได้ละเอียดในระดับพิกเซล
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">6</span> <b>พรีวิวดูตำแหน่งจริง:</b> กดปุ่ม <code>👁️ ดูเลข</code> ตัวเลขหน้าจำลองจะปรากฏบนหน้าเอกสารทันที
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">7</span> <b>การซ่อนเลขหน้าปก:</b> ที่หน้าปกหรือใบปะหน้า ให้คลิกปุ่ม <code>🖨️ พิมพ์เลข</code> ให้เปลี่ยนเป็นสีชมพู <code>🚫 ซ่อนเลข</code> หน้านั้นจะไม่ถูกพิมพ์เลขทับ
+                </div>
+            </div>
+
+            <!-- 5. เครื่องมืองานสารบรรณขั้นสูง (กลุ่ม B) -->
+            <div class="manual-section" style="border-left-color: #17a2b8;">
+                <h3>🏛️ 5. ขั้นตอนการใช้เครื่องมืองานสารบรรณ (กลุ่ม B)</h3>
+                
+                <p><b>📥 5.1 การประทับเลขรับหนังสือ / ตรายางสารบรรณ (F7)</b></p>
+                <ol style="margin:0 0 10px 20px; padding:0;">
+                    <li>ติ๊กถูกที่ <code>เปิดใช้งานตรายางรับหนังสือ</code></li>
+                    <li>กรอก <b>สังกัด/กลุ่ม</b> (เช่น <i>ศธจ.อุดรธานี</i> หรือ <i>กลุ่มนโยบายและแผน</i>)</li>
+                    <li>กรอก <b>เลขที่รับ</b> (เช่น <i>๑๒๓/๒๕๖๙</i>)</li>
+                    <li>ตรวจสอบ <b>วันที่รับ</b> และ <b>เวลารับ</b> (ระบบจะกรอกวันที่-ปี พ.ศ. ปัจจุบันเป็นเลขไทยให้อัตโนมัติ)</li>
+                    <li>เลือกให้ประทับ <i>หน้าแรกเท่านั้น</i> และเลือกมุม <i>ขวาบน (TR)</i> หรือ <i>ซ้ายบน (TL)</i></li>
+                </ol>
+
+                <p><b>🛡️ 5.2 การประทับตราลายน้ำเอกสาร (Watermark - F8)</b></p>
+                <ol style="margin:0 0 10px 20px; padding:0;">
+                    <li>ติ๊กถูกที่ <code>เปิดประทับลายน้ำ</code></li>
+                    <li>เลือกข้อความสำเร็จรูป เช่น <i>สำเนาถูกต้อง</i>, <i>เอกสารราชการลับ</i>, <i>ร่าง - ห้ามเผยแพร่</i> หรือพิมพ์ข้อความเอง</li>
+                    <li>เลือกสี (แดง, เทา, น้ำเงิน) และมุมเอียง 45 องศา ระบบจะประทับกึ่งกลางทุกหน้าอย่างโปร่งแสง ไม่บดบังเนื้อหา</li>
+                </ol>
+
+                <p><b>📄 5.3 การแทรกหน้าว่าง A4 (Blank Page - F10)</b></p>
+                <ul style="margin:0 0 10px 20px; padding:0;">
+                    <li>กดปุ่ม <code>➕ แทรกหน้าว่าง A4</code> เพื่อสร้างหน้ากระดาษเปล่าสำหรับคั่นระหว่างบท หรือแทรกเพื่อพิมพ์เอกสารหน้า-หลัง</li>
+                </ul>
+
+                <p><b>✂️ 5.4 การตัดแบ่ง / แยกช่วงหน้า (Split - F11)</b></p>
+                <ul style="margin:0 0 10px 20px; padding:0;">
+                    <li>ในช่อง <code>ช่วงหน้า:</code> ให้พิมพ์หน้าที่ต้องการ เช่น <code>1-5, 8, 10-12</code></li>
+                    <li>กดปุ่ม <code>💾 ดาวน์โหลดเฉพาะช่วงนี้</code> เพื่อสร้างไฟล์ PDF เฉพาะหน้าที่เลือกโดยไม่ต้องส่งออกทั้งเล่ม</li>
+                </ul>
+
+                <p><b>🔢 5.5 การข้ามหน้าซ่อนเลข ไม่ให้นับสะสม (F12)</b></p>
+                <ul style="margin:0 0 6px 20px; padding:0;">
+                    <li>ติ๊กที่ช่อง <code>หน้าที่ "ซ่อนเลข" ไม่ให้นับสะสม</code> เหมาะสำหรับกรณีที่มีหน้าปก 1 หน้า แล้วต้องการให้เนื้อหาหน้าถัดไปเริ่มนับเป็น <b>หน้า 1</b> ทันที</li>
+                </ul>
+            </div>
+
+            <!-- 6. การส่งออกและดาวน์โหลด -->
+            <div class="manual-section" style="border-left-color: #28a745;">
+                <h3>💾 6. การส่งออกและบันทึกไฟล์ (Export PDF)</h3>
+                <div class="manual-step">
+                    <span class="manual-step-num">1</span> ตรวจสอบความถูกต้องของลำดับหน้าและการตั้งค่าทั้งหมด
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">2</span> กดปุ่มสีเขียว <code>💾 Download PDF</code> ที่แถบเครื่องมือด้านบน
+                </div>
+                <div class="manual-step">
+                    <span class="manual-step-num">3</span> ระบบจะประมวลผล ฝังฟอนต์สารบรรณ และดาวน์โหลดไฟล์ลงในโฟลเดอร์ Downloads ของเครื่องโดยตั้งชื่อตามวันและเวลาให้อัตโนมัติ เช่น <code>PEO_PDF_20261109_1015.pdf</code>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer" style="border-top:1px solid var(--border); padding-top:10px; margin-top:10px;">
+            <button type="button" class="btn btn-primary" onclick="closeManualModal()">รับทราบและปิดคู่มือ</button>
+        </div>
+    </div>
 </div>
 
 <div id="zoom-modal" onclick="if(event.target === this) this.style.display='none'">
@@ -194,6 +531,8 @@
 </div>
 
 <script>
+    const SETTINGS_KEY = 'peo_pdf_helper_settings';
+
     function toggleTheme() {
         const body = document.documentElement;
         const btn = document.getElementById('theme-btn');
@@ -208,12 +547,135 @@
         }
     }
 
-    function showAlert(msg) {
-        document.getElementById('alert-body').innerText = msg;
-        document.getElementById('alert-modal').style.display = 'flex';
+    function openManualModal() {
+        document.getElementById('manual-modal').style.display = 'flex';
     }
-    function closeAlert() {
+
+    function closeManualModal() {
+        document.getElementById('manual-modal').style.display = 'none';
+    }
+
+    function toggleAdvancedPanel() {
+        const content = document.getElementById('adv-content');
+        const arrow = document.getElementById('adv-arrow');
+        const badge = document.getElementById('adv-badge');
+        const isCollapsed = content.classList.toggle('collapsed');
+        arrow.innerText = isCollapsed ? '▼' : '▲';
+        badge.innerText = isCollapsed ? 'คลิกเพื่อเปิดเครื่องมือ' : 'คลิกเพื่อย่อ/ขยาย';
+    }
+
+    let confirmCallback = null;
+    function showAlert(msg, title = '⚠️ แจ้งเตือนจากระบบ') {
+        document.getElementById('alert-title').innerText = title;
+        document.getElementById('alert-body').innerText = msg;
+        document.getElementById('alert-btn-cancel').style.display = 'none';
+        document.getElementById('alert-modal').style.display = 'flex';
+        confirmCallback = null;
+    }
+
+    function showConfirm(msg, onConfirm, title = '❓ ยืนยันการดำเนินการ') {
+        document.getElementById('alert-title').innerText = title;
+        document.getElementById('alert-body').innerText = msg;
+        document.getElementById('alert-btn-cancel').style.display = 'inline-flex';
+        document.getElementById('alert-modal').style.display = 'flex';
+        confirmCallback = onConfirm;
+    }
+
+    function closeAlert(isConfirmed = false) {
         document.getElementById('alert-modal').style.display = 'none';
+        if (isConfirmed && typeof confirmCallback === 'function') {
+            const cb = confirmCallback;
+            confirmCallback = null;
+            cb();
+        } else {
+            confirmCallback = null;
+        }
+    }
+
+    function setDefaultStampValues() {
+        const d = new Date();
+        const thYear = d.getFullYear() + 543;
+        const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+        const dayStr = toThaiNum(d.getDate());
+        const yearStr = toThaiNum(thYear);
+        const timeStr = toThaiNum(String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')) + ' น.';
+        
+        if (!document.getElementById('stamp-date').value) {
+            document.getElementById('stamp-date').value = `${dayStr} ${months[d.getMonth()]} ${yearStr}`;
+        }
+        if (!document.getElementById('stamp-time').value) {
+            document.getElementById('stamp-time').value = timeStr;
+        }
+    }
+
+    function toThaiNum(str) {
+        return String(str).replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
+    }
+
+    function saveSettings() {
+        try {
+            const settings = {
+                numType: document.getElementById('num-type').value,
+                numFormat: document.getElementById('num-format').value,
+                fontStyle: document.getElementById('font-style').value,
+                fontSize: document.getElementById('font-size').value,
+                numPos: document.getElementById('num-pos').value,
+                offsetX: document.getElementById('offset-x').value,
+                offsetY: document.getElementById('offset-y').value,
+                masterNum: document.getElementById('master-num-toggle').checked,
+                stampEnable: document.getElementById('stamp-enable').checked,
+                stampDept: document.getElementById('stamp-dept').value,
+                stampNo: document.getElementById('stamp-no').value,
+                stampPage: document.getElementById('stamp-page').value,
+                stampPos: document.getElementById('stamp-pos').value,
+                wmEnable: document.getElementById('wm-enable').checked,
+                wmText: document.getElementById('wm-text').value,
+                wmSize: document.getElementById('wm-size').value,
+                wmColor: document.getElementById('wm-color').value,
+                wmAngle: document.getElementById('wm-angle').value,
+                skipUnprintedCount: document.getElementById('skip-unprinted-count').checked
+            };
+            localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        } catch (e) {}
+    }
+
+    function loadSettings() {
+        try {
+            const raw = localStorage.getItem(SETTINGS_KEY);
+            if (!raw) return;
+            const s = JSON.parse(raw);
+            if (s.numType) document.getElementById('num-type').value = s.numType;
+            if (s.fontStyle) document.getElementById('font-style').value = s.fontStyle;
+            if (s.fontSize) document.getElementById('font-size').value = s.fontSize;
+            if (s.numPos) document.getElementById('num-pos').value = s.numPos;
+            if (s.offsetX !== undefined) document.getElementById('offset-x').value = s.offsetX;
+            if (s.offsetY !== undefined) document.getElementById('offset-y').value = s.offsetY;
+            if (s.masterNum !== undefined) {
+                document.getElementById('master-num-toggle').checked = s.masterNum;
+                const textLabel = document.getElementById('master-toggle-text');
+                if (s.masterNum) {
+                    textLabel.innerText = 'เปิดการรันเลข';
+                    textLabel.style.color = 'var(--success)';
+                } else {
+                    textLabel.innerText = 'ปิดรันเลข (ต่อไฟล์เฉยๆ)';
+                    textLabel.style.color = 'var(--danger)';
+                }
+            }
+            if (s.stampEnable !== undefined) document.getElementById('stamp-enable').checked = s.stampEnable;
+            if (s.stampDept) document.getElementById('stamp-dept').value = s.stampDept;
+            if (s.stampNo) document.getElementById('stamp-no').value = s.stampNo;
+            if (s.stampPage) document.getElementById('stamp-page').value = s.stampPage;
+            if (s.stampPos) document.getElementById('stamp-pos').value = s.stampPos;
+            if (s.wmEnable !== undefined) document.getElementById('wm-enable').checked = s.wmEnable;
+            if (s.wmText) document.getElementById('wm-text').value = s.wmText;
+            if (s.wmSize) document.getElementById('wm-size').value = s.wmSize;
+            if (s.wmColor) document.getElementById('wm-color').value = s.wmColor;
+            if (s.wmAngle) document.getElementById('wm-angle').value = s.wmAngle;
+            if (s.skipUnprintedCount !== undefined) document.getElementById('skip-unprinted-count').checked = s.skipUnprintedCount;
+
+            updateFormatOptions();
+            if (s.numFormat) document.getElementById('num-format').value = s.numFormat;
+        } catch (e) {}
     }
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -221,6 +683,8 @@
             document.documentElement.setAttribute('data-theme', 'dark');
             document.getElementById('theme-btn').innerText = '☀️ Light Mode';
         }
+        setDefaultStampValues();
+        loadSettings();
     });
 
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -237,21 +701,28 @@
     document.body.addEventListener('dragleave', () => document.body.classList.remove('drag-over'));
     document.body.addEventListener('drop', async (e) => {
         document.body.classList.remove('drag-over');
-        if (e.dataTransfer.files.length > 0) await handleFiles(e.dataTransfer.files);
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            await handleFiles(e.dataTransfer.files);
+        }
     });
 
+    // -------------------------------------------------------------
+    // Undo / Redo System (Node Reference Snapshot - 100% Reliable)
+    // -------------------------------------------------------------
     let historyStack = [];
     let redoStack = [];
 
-    function saveHistory() {
-        const state = Array.from(container.children).map(card => ({
-            html: card.innerHTML,
-            rotation: card.dataset.rotation,
-            bytes: card._pdfBytes,
-            idx: card._originalIdx,
-            print: card.querySelector('.toggle-print').checked
+    function getContainerSnapshot() {
+        return Array.from(container.children).map(card => ({
+            card: card,
+            rotation: parseInt(card.dataset.rotation) || 0,
+            print: !!(card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked)
         }));
-        historyStack.push(JSON.stringify(state));
+    }
+
+    function saveHistory() {
+        const state = getContainerSnapshot();
+        historyStack.push(state);
         if (historyStack.length > 30) historyStack.shift();
         redoStack = [];
         updateHistoryButtons();
@@ -266,6 +737,7 @@
         if (historyStack.length <= 1) return;
         redoStack.push(historyStack.pop());
         restoreState(historyStack[historyStack.length - 1]);
+        updateHistoryButtons();
     };
 
     document.getElementById('btn-redo').onclick = () => {
@@ -273,35 +745,31 @@
         const state = redoStack.pop();
         historyStack.push(state);
         restoreState(state);
+        updateHistoryButtons();
     };
 
-    function restoreState(json) {
-        const state = JSON.parse(json);
-        Array.from(container.children).forEach(destroyCardMemory);
+    function restoreState(state) {
         container.innerHTML = '';
-        
-        state.forEach(data => {
-            const card = document.createElement('div');
-            card.className = 'page-card';
-            card.innerHTML = data.html;
-            card.dataset.rotation = data.rotation;
-            card._pdfBytes = data.bytes;
-            card._originalIdx = data.idx;
-            card.querySelector('canvas').style.transform = `rotate(${data.rotation}deg)`;
-            card.querySelector('.toggle-print').checked = data.print;
+        state.forEach(item => {
+            const card = item.card;
+            card.dataset.rotation = item.rotation;
+            const canvas = card.querySelector('canvas');
+            if (canvas) canvas.style.transform = `rotate(${item.rotation}deg)`;
             
             const togglePrint = card.querySelector('.toggle-print');
             const lbl = card.querySelector('.toggle-print-label');
-            togglePrint.onchange = () => { 
-                lbl.classList.toggle('disabled', !togglePrint.checked);
-                lbl.querySelector('span').innerText = togglePrint.checked ? '🖨️ พิมพ์เลข' : '🚫 ซ่อนเลข';
-                saveHistory(); 
-                if(isPreviewOpen) updatePreviewNumbers(); 
-            };
+            if (togglePrint) {
+                togglePrint.checked = item.print;
+                if (lbl) {
+                    lbl.classList.toggle('disabled', !item.print);
+                    const span = lbl.querySelector('span');
+                    if (span) span.innerText = item.print ? '🖨️ พิมพ์เลข' : '🚫 ซ่อนเลข';
+                }
+            }
             container.appendChild(card);
         });
         updateAllBadges();
-        if(isPreviewOpen) updatePreviewNumbers();
+        if (isPreviewOpen) updatePreviewNumbers();
     }
 
     const sortable = new Sortable(container, { 
@@ -315,44 +783,76 @@
     });
 
     async function handleFiles(files) {
-        if (!files.length) return;
+        if (!files || !files.length) return;
         loading.style.display = 'flex';
-        document.getElementById('loading-status').innerText = 'กำลังประมวลผล PDF...';
+        document.getElementById('loading-status').innerText = 'กำลังประมวลผลไฟล์...';
 
-        for (const file of files) {
-            if (file.type !== "application/pdf") continue;
-            const bytes = await file.arrayBuffer();
-            let pdf = null;
-
-            try {
-                pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
-            } catch (err) {
-                if (err.name === 'PasswordException' || err.message.includes('encrypted')) {
-                    showAlert(`ไฟล์ "${file.name}" มีการป้องกันด้วยรหัสผ่าน\n\nระบบไม่สามารถนำเข้าไฟล์ที่ล็อกรหัสผ่านได้โดยตรง\n\nวิธีแก้ไข:\n1. เปิดไฟล์ PDF นี้ด้วยโปรแกรมเบราว์เซอร์\n2. กด Print และเลือก Save as PDF เพื่อถอดรหัสก่อนใช้งาน`);
-                } else {
-                    showAlert(`เกิดข้อผิดพลาดในการเปิดไฟล์ "${file.name}": ${err.message}`);
+        try {
+            for (const file of files) {
+                const lowerName = file.name.toLowerCase();
+                const isImage = file.type.startsWith('image/') || /\.(png|jpe?g)$/i.test(lowerName);
+                
+                if (isImage) {
+                    await handleSingleImageFile(file);
+                    continue;
                 }
-                continue;
-            }
 
-            const pos = insertPosSelect.value;
-            const newCards = [];
+                if (file.type && file.type !== "application/pdf" && !lowerName.endsWith('.pdf')) {
+                    showAlert(`ไฟล์ "${file.name}" ไม่ใช่ PDF หรือรูปภาพที่รองรับค่ะ`);
+                    continue;
+                }
 
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                newCards.push(await createPageCard(page, i, bytes));
-            }
+                if (file.size > 150 * 1024 * 1024) {
+                    showAlert(`ไฟล์ "${file.name}" มีขนาดใหญ่เกินไป (มากกว่า 150 MB) อาจทำให้เบราว์เซอร์ทำงานช้าลงได้ค่ะ`);
+                }
 
-            if (pos === 'end') {
-                newCards.forEach(c => container.appendChild(c));
-            } else {
-                const target = container.children[parseInt(pos)];
-                newCards.reverse().forEach(c => target.after(c));
+                const bytes = await file.arrayBuffer();
+
+                // Validate PDF Magic Bytes (%PDF-)
+                const header = new Uint8Array(bytes.slice(0, 5));
+                const headerStr = String.fromCharCode.apply(null, header);
+                if (!headerStr.startsWith('%PDF')) {
+                    showAlert(`ไฟล์ "${file.name}" โครงสร้างไม่ถูกต้องหรือไม่ใช่ PDF มาตรฐานค่ะ`);
+                    continue;
+                }
+
+                let pdf = null;
+                try {
+                    pdf = await pdfjsLib.getDocument({ data: new Uint8Array(bytes) }).promise;
+                } catch (err) {
+                    if (err.name === 'PasswordException' || (err.message && err.message.toLowerCase().includes('password'))) {
+                        showAlert(`ไฟล์ "${file.name}" มีการป้องกันด้วยรหัสผ่าน\n\nระบบไม่สามารถนำเข้าไฟล์ที่ล็อกรหัสผ่านได้โดยตรง\n\nวิธีแก้ไข:\n1. เปิดไฟล์ PDF นี้ด้วยโปรแกรมเบราว์เซอร์\n2. กด Print และเลือก Save as PDF เพื่อถอดรหัสก่อนใช้งาน`);
+                    } else {
+                        showAlert(`เกิดข้อผิดพลาดในการเปิดไฟล์ "${file.name}": ${err.message}`);
+                    }
+                    continue;
+                }
+
+                const pos = insertPosSelect.value;
+                const newCards = [];
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    document.getElementById('loading-status').innerText = `กำลังอ่านหน้า ${i} จาก ${pdf.numPages} ของไฟล์ ${file.name}...`;
+                    const page = await pdf.getPage(i);
+                    newCards.push(await createPageCard(page, i, bytes));
+                }
+
+                if (pos === 'end' || !container.children.length) {
+                    newCards.forEach(c => container.appendChild(c));
+                } else {
+                    const targetIdx = parseInt(pos);
+                    const target = container.children[targetIdx] || container.lastElementChild;
+                    newCards.reverse().forEach(c => target.after(c));
+                }
             }
+            updateAllBadges();
+            saveHistory();
+        } catch (e) {
+            console.error(e);
+            showAlert(`เกิดข้อผิดพลาดในการโหลดไฟล์:\n${e.message}`);
+        } finally {
+            loading.style.display = 'none';
         }
-        updateAllBadges();
-        saveHistory();
-        loading.style.display = 'none';
     }
 
     async function createPageCard(page, pageNum, pdfBytes) {
@@ -364,9 +864,9 @@
         const card = document.createElement('div');
         card.className = 'page-card';
         card.dataset.rotation = 0;
-        card._pdfBytes = pdfBytes; card._originalIdx = pageNum - 1;
+        card._pdfBytes = pdfBytes; 
+        card._originalIdx = pageNum - 1;
 
-        // ดึงสถานะปัจจุบันของ Master Toggle มาเป็นค่าเริ่มต้นให้กับเอกสารที่เพิ่งอัปโหลด
         const isMasterEnabled = document.getElementById('master-num-toggle').checked;
         const printChecked = isMasterEnabled ? 'checked' : '';
         const printLabelClass = isMasterEnabled ? '' : 'disabled';
@@ -399,36 +899,208 @@
         return card;
     }
 
-    function destroyCardMemory(card) {
-        const canvas = card.querySelector('canvas');
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-            canvas.width = 0; canvas.height = 0;
+    // -------------------------------------------------------------
+    // F10: Insert Blank Page
+    // -------------------------------------------------------------
+    async function insertBlankPage() {
+        loading.style.display = 'flex';
+        document.getElementById('loading-status').innerText = 'กำลังสร้างหน้าว่าง...';
+        try {
+            const { PDFDocument } = PDFLib;
+            const blankDoc = await PDFDocument.create();
+            blankDoc.addPage([595.28, 841.89]); // A4 Size in points
+            const blankBytes = await blankDoc.save();
+
+            const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(blankBytes) }).promise;
+            const page = await pdf.getPage(1);
+            const card = await createPageCard(page, 1, blankBytes);
+            card.classList.add('blank-card');
+
+            const badge = document.createElement('div');
+            badge.className = 'page-badge-extra';
+            badge.innerText = 'หน้าว่าง';
+            card.appendChild(badge);
+
+            const pos = insertPosSelect.value;
+            if (pos === 'end' || !container.children.length) {
+                container.appendChild(card);
+            } else {
+                const targetIdx = parseInt(pos);
+                const target = container.children[targetIdx] || container.lastElementChild;
+                target.after(card);
+            }
+
+            updateAllBadges();
+            saveHistory();
+        } catch (e) {
+            console.error(e);
+            showAlert('ไม่สามารถสร้างหน้าว่างได้: ' + e.message);
+        } finally {
+            loading.style.display = 'none';
         }
     }
 
+    // -------------------------------------------------------------
+    // F9: Convert Images to PDF and Insert
+    // -------------------------------------------------------------
+    async function handleImageUpload(files) {
+        if (!files || !files.length) return;
+        loading.style.display = 'flex';
+        document.getElementById('loading-status').innerText = 'กำลังแปลงรูปภาพเป็นหน้าเอกสาร...';
+        try {
+            for (const file of files) {
+                await handleSingleImageFile(file);
+            }
+            updateAllBadges();
+            saveHistory();
+        } catch (e) {
+            console.error(e);
+            showAlert('เกิดข้อผิดพลาดในการนำเข้ารูปภาพ: ' + e.message);
+        } finally {
+            loading.style.display = 'none';
+            document.getElementById('image-upload').value = '';
+        }
+    }
+
+    async function handleSingleImageFile(file) {
+        const { PDFDocument } = PDFLib;
+        const doc = await PDFDocument.create();
+        const imgBytes = await file.arrayBuffer();
+        
+        let embeddedImg = null;
+        if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
+            embeddedImg = await doc.embedPng(imgBytes);
+        } else {
+            embeddedImg = await doc.embedJpg(imgBytes);
+        }
+
+        // Fit into standard A4 (595.28 x 841.89) with 20pt margin
+        const pageW = 595.28;
+        const pageH = 841.89;
+        const page = doc.addPage([pageW, pageH]);
+        
+        const maxW = pageW - 40;
+        const maxH = pageH - 40;
+        const scale = Math.min(maxW / embeddedImg.width, maxH / embeddedImg.height, 1);
+        const w = embeddedImg.width * scale;
+        const h = embeddedImg.height * scale;
+        const x = (pageW - w) / 2;
+        const y = (pageH - h) / 2;
+
+        page.drawImage(embeddedImg, { x, y, width: w, height: h });
+        const pdfBytes = await doc.save();
+
+        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBytes) }).promise;
+        const pdfPage = await pdf.getPage(1);
+        const card = await createPageCard(pdfPage, 1, pdfBytes);
+
+        const badge = document.createElement('div');
+        badge.className = 'page-badge-extra';
+        badge.innerText = 'รูปภาพ';
+        card.appendChild(badge);
+
+        const pos = insertPosSelect.value;
+        if (pos === 'end' || !container.children.length) {
+            container.appendChild(card);
+        } else {
+            const targetIdx = parseInt(pos);
+            const target = container.children[targetIdx] || container.lastElementChild;
+            target.after(card);
+        }
+    }
+
+    // -------------------------------------------------------------
+    // F11: Extract / Split Selected Page Range
+    // -------------------------------------------------------------
+    async function extractPages() {
+        if (!container.children.length) return showAlert('ยังไม่มีหน้าเอกสารในระบบค่ะ');
+        const rangeStr = document.getElementById('split-range').value.trim();
+        if (!rangeStr) return showAlert('กรุณากรอกช่วงหน้าที่ต้องการ เช่น 1-5 หรือ 1, 3, 5-8 ค่ะ');
+
+        const totalPages = container.children.length;
+        const selectedIndices = parsePageRange(rangeStr, totalPages);
+        if (!selectedIndices.length) return showAlert('ไม่พบหน้าที่ระบุตามช่วงที่กรอกค่ะ (มีทั้งหมด ' + totalPages + ' หน้า)');
+
+        loading.style.display = 'flex';
+        document.getElementById('loading-status').innerText = `กำลังตัดแบ่งไฟล์ ${selectedIndices.length} หน้า...`;
+
+        try {
+            const { PDFDocument, degrees } = PDFLib;
+            const finalPdf = await PDFDocument.create();
+            const docCache = new Map();
+
+            for (const idx of selectedIndices) {
+                const card = container.children[idx];
+                let src = docCache.get(card._pdfBytes);
+                if (!src) {
+                    src = await PDFDocument.load(card._pdfBytes, { ignoreEncryption: true });
+                    docCache.set(card._pdfBytes, src);
+                }
+                const [page] = await finalPdf.copyPages(src, [card._originalIdx]);
+                const rot = parseInt(card.dataset.rotation || 0);
+                const totalRot = (page.getRotation().angle + rot) % 360;
+                page.setRotation(degrees(totalRot));
+                finalPdf.addPage(page);
+            }
+
+            const outBytes = await finalPdf.save();
+            const blob = new Blob([outBytes], { type: 'application/pdf' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `PEO_SPLIT_Pages_${rangeStr.replace(/[\s,]+/g, '_')}.pdf`;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 15000);
+        } catch (e) {
+            console.error(e);
+            showAlert('ไม่สามารถแยกไฟล์ได้: ' + e.message);
+        } finally {
+            loading.style.display = 'none';
+        }
+    }
+
+    function parsePageRange(str, max) {
+        const parts = str.split(/[,;\s]+/);
+        const set = new Set();
+        for (const part of parts) {
+            if (!part) continue;
+            if (part.includes('-')) {
+                const [startStr, endStr] = part.split('-');
+                const s = parseInt(startStr);
+                const e = parseInt(endStr);
+                if (!isNaN(s) && !isNaN(e)) {
+                    for (let i = Math.min(s, e); i <= Math.max(s, e); i++) {
+                        if (i >= 1 && i <= max) set.add(i - 1);
+                    }
+                }
+            } else {
+                const n = parseInt(part);
+                if (!isNaN(n) && n >= 1 && n <= max) set.add(n - 1);
+            }
+        }
+        return Array.from(set).sort((a, b) => a - b);
+    }
+
     function rotateCard(card) {
-        card.dataset.rotation = (parseInt(card.dataset.rotation) + 90) % 360;
-        card.querySelector('canvas').style.transform = `rotate(${card.dataset.rotation}deg)`;
+        card.dataset.rotation = (parseInt(card.dataset.rotation || 0) + 90) % 360;
+        const canvas = card.querySelector('canvas');
+        if (canvas) canvas.style.transform = `rotate(${card.dataset.rotation}deg)`;
         saveHistory();
         if(isPreviewOpen) updatePreviewNumbers();
     }
 
     function deleteCard(card) {
-        destroyCardMemory(card);
         card.remove();
         updateAllBadges();
         saveHistory();
     }
 
     document.getElementById('btn-clear').onclick = () => {
-        if(confirm('ต้องการล้างหน้าเอกสารทั้งหมดใช่ไหมคะ?')) {
-            Array.from(container.children).forEach(destroyCardMemory);
+        if (!container.children.length) return;
+        showConfirm('ต้องการล้างหน้าเอกสารทั้งหมดใช่ไหมคะ?\n(หากล้างแล้ว สามารถกดปุ่ม Undo ↩️ เพื่อย้อนกลับได้ค่ะ)', () => {
             container.innerHTML = '';
             updateAllBadges();
             saveHistory();
-        }
+        });
     };
 
     function updateAllBadges() {
@@ -440,6 +1112,7 @@
             opt.value = i; opt.innerText = `แทรกหลังหน้าที่ ${i + 1}`;
             insertPosSelect.appendChild(opt);
         }
+        updateFormatOptions();
         if(isPreviewOpen) updatePreviewNumbers();
     }
 
@@ -457,12 +1130,10 @@
         if (isEnabled) {
             textLabel.innerText = 'เปิดการรันเลข';
             textLabel.style.color = 'var(--success)';
-            
-            // Sync สวิตช์ย่อย: ให้ทุกหน้าเปลี่ยนสถานะเป็น 'พิมพ์เลข' ทันที
             Array.from(container.children).forEach(card => {
                 const togglePrint = card.querySelector('.toggle-print');
                 const lbl = card.querySelector('.toggle-print-label');
-                if (!togglePrint.checked) {
+                if (togglePrint && !togglePrint.checked) {
                     togglePrint.checked = true;
                     lbl.classList.remove('disabled');
                     lbl.querySelector('span').innerText = '🖨️ พิมพ์เลข';
@@ -471,12 +1142,10 @@
         } else {
             textLabel.innerText = 'ปิดรันเลข (ต่อไฟล์เฉยๆ)';
             textLabel.style.color = 'var(--danger)';
-            
-            // Sync สวิตช์ย่อย: ให้ทุกหน้าเปลี่ยนสถานะเป็น 'ซ่อนเลข' ทันที
             Array.from(container.children).forEach(card => {
                 const togglePrint = card.querySelector('.toggle-print');
                 const lbl = card.querySelector('.toggle-print-label');
-                if (togglePrint.checked) {
+                if (togglePrint && togglePrint.checked) {
                     togglePrint.checked = false;
                     lbl.classList.add('disabled');
                     lbl.querySelector('span').innerText = '🚫 ซ่อนเลข';
@@ -484,8 +1153,36 @@
             });
         }
 
+        saveSettings();
         if(isPreviewOpen) updatePreviewNumbers();
         saveHistory();
+    }
+
+    // -------------------------------------------------------------
+    // F12: Sequence calculation (with optional skip-unprinted)
+    // -------------------------------------------------------------
+    function calculatePageNumbers(startNum) {
+        const cards = Array.from(container.children);
+        const skipUnprinted = document.getElementById('skip-unprinted-count').checked;
+        const numbers = [];
+        let cur = startNum;
+        let printableTotal = 0;
+
+        for (let i = 0; i < cards.length; i++) {
+            const isPrint = cards[i].querySelector('.toggle-print') && cards[i].querySelector('.toggle-print').checked;
+            if (isPrint) {
+                numbers.push(cur);
+                cur++;
+                printableTotal++;
+            } else {
+                numbers.push(cur);
+                if (!skipUnprinted) {
+                    cur++;
+                }
+            }
+        }
+        const total = skipUnprinted ? Math.max(printableTotal, 1) : Math.max(cards.length, 1);
+        return { numbers, total };
     }
 
     function updatePreviewNumbers() {
@@ -493,32 +1190,35 @@
         const type = document.getElementById('num-type').value;
         const format = document.getElementById('num-format').value || '{n}';
         const posType = document.getElementById('num-pos').value;
-        const startNum = parseInt(document.getElementById('start-num').value) || 1; 
+        const startNum = Math.max(1, parseInt(document.getElementById('start-num').value) || 1); 
         
         const fontStyleFile = document.getElementById('font-style').value;
         const isBold = fontStyleFile.includes('BOLD');
         const isItalic = fontStyleFile.includes('ITALIC');
+        const baseFontSize = Math.max(8, parseInt(document.getElementById('font-size').value) || 16);
         
         const ox = (parseInt(document.getElementById('offset-x').value) || 0) * 0.3;
         const oy = (parseInt(document.getElementById('offset-y').value) || 0) * 0.3;
-        const totalPages = container.children.length;
+
+        const { numbers, total } = calculatePageNumbers(startNum);
 
         Array.from(container.children).forEach((card, i) => {
             const preview = card.querySelector('.number-preview');
-            const isPrint = card.querySelector('.toggle-print').checked;
+            const isPrint = card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked;
             
             if (!isPreviewOpen || !isPrint || !isMasterEnabled) { 
-                preview.style.display = 'none'; 
+                if (preview) preview.style.display = 'none'; 
                 return; 
             }
 
             preview.style.display = 'block';
             
-            const currentNumber = startNum + i;
-            preview.innerText = getFormattedNumberText(currentNumber, totalPages, type, format);
+            const currentNumber = numbers[i] || (startNum + i);
+            preview.innerText = getFormattedNumberText(currentNumber, total, type, format);
             
             preview.style.fontWeight = isBold ? 'bold' : 'normal';
             preview.style.fontStyle = isItalic ? 'italic' : 'normal';
+            preview.style.fontSize = Math.max(9, Math.round(baseFontSize * 0.35)) + 'px';
 
             preview.style.top = 'auto'; preview.style.bottom = 'auto'; preview.style.left = 'auto'; preview.style.right = 'auto'; preview.style.transform = 'none';
 
@@ -538,55 +1238,118 @@
         }
         else if (type === 'thai-alpha') {
             const alphabet = "กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสฬอฮ";
-            str = alphabet[(num-1) % alphabet.length];
-            strTotal = alphabet[(total-1) % alphabet.length];
+            str = alphabet[(num - 1) % alphabet.length];
+            strTotal = alphabet[(total - 1) % alphabet.length];
         }
         return format.replace('{n}', str).replace('{total}', strTotal);
     }
 
+    // -------------------------------------------------------------
+    // Export Final PDF with Numbering + Stamp (F7) + Watermark (F8)
+    // -------------------------------------------------------------
     document.getElementById('btn-export').onclick = async () => {
-        if (!container.children.length) return alert('กรุณาเลือกไฟล์ PDF ก่อนค่ะ!');
+        if (!container.children.length) {
+            showAlert('กรุณาเลือกไฟล์ PDF หรือรูปภาพก่อนค่ะ!');
+            return;
+        }
         loading.style.display = 'flex';
+        document.getElementById('loading-status').innerText = 'กำลังจัดเตรียมไฟล์ PDF...';
+        
         try {
-            const { PDFDocument, degrees } = PDFLib;
+            const { PDFDocument, degrees, rgb } = PDFLib;
             const finalPdf = await PDFDocument.create();
+            finalPdf.registerFontkit(fontkit);
+
             const isMasterEnabled = document.getElementById('master-num-toggle').checked;
-            const needsFont = isMasterEnabled && Array.from(container.children).some(card => card.querySelector('.toggle-print').checked);
-            let font = null;
+            const stampEnabled = document.getElementById('stamp-enable').checked;
+            const wmEnabled = document.getElementById('wm-enable').checked;
             
-            if (needsFont) {
-                finalPdf.registerFontkit(fontkit);
-                const fontFileName = document.getElementById('font-style').value;
-                const fontRes = await fetch('fonts/' + fontFileName);
-                if (!fontRes.ok) throw new Error(`ไม่พบไฟล์ฟอนต์ ${fontFileName} ในระบบ (Error ${fontRes.status})\nรบกวนตรวจสอบโฟลเดอร์ fonts/ บน Server ด้วยนะคะ`);
-                const fontBytes = await fontRes.arrayBuffer();
-                font = await finalPdf.embedFont(fontBytes);
-            }
-            
+            // โหลดฟอนต์ภาษาไทยสำหรับรันเลข / ตรายาง / ลายน้ำ
+            document.getElementById('loading-status').innerText = 'กำลังโหลดฟอนต์สารบรรณ...';
+            const fontFileName = document.getElementById('font-style').value;
+            const fontRes = await fetch('fonts/' + fontFileName);
+            if (!fontRes.ok) throw new Error(`ไม่พบไฟล์ฟอนต์ ${fontFileName} ในระบบ (Error ${fontRes.status})`);
+            const fontBytes = await fontRes.arrayBuffer();
+            const font = await finalPdf.embedFont(fontBytes, { subset: true });
+
+            // โหลดฟอนต์หนาสำหรับตรายาง
+            let fontBold = font;
+            try {
+                const fbRes = await fetch('fonts/THSARABUNNEWBOLD.TTF');
+                if (fbRes.ok) {
+                    fontBold = await finalPdf.embedFont(await fbRes.arrayBuffer(), { subset: true });
+                }
+            } catch (err) {}
+
             const type = document.getElementById('num-type').value;
-            const format = document.getElementById('num-format').value;
+            const format = document.getElementById('num-format').value || '{n}';
             const posType = document.getElementById('num-pos').value;
-            const fSize = parseInt(document.getElementById('font-size').value);
-            const startNum = parseInt(document.getElementById('start-num').value) || 1;
+            const fSize = Math.max(6, Math.min(72, parseInt(document.getElementById('font-size').value) || 16));
+            const startNum = Math.max(1, parseInt(document.getElementById('start-num').value) || 1);
             const ox = parseInt(document.getElementById('offset-x').value) || 0;
             const oy = parseInt(document.getElementById('offset-y').value) || 0;
-            const totalPages = container.children.length; 
 
-            for (let i = 0; i < container.children.length; i++) {
-                const card = container.children[i];
-                const src = await PDFDocument.load(card._pdfBytes, { ignoreEncryption: true });
+            const { numbers, total } = calculatePageNumbers(startNum);
+
+            // ข้อมูลสำหรับ F7 (ตรายางรับหนังสือ)
+            const stampDept = document.getElementById('stamp-dept').value || 'ศธจ.อุดรธานี';
+            const stampNo = document.getElementById('stamp-no').value || '';
+            const stampDate = document.getElementById('stamp-date').value || '';
+            const stampTime = document.getElementById('stamp-time').value || '';
+            const stampPageSetting = document.getElementById('stamp-page').value;
+            const stampPosSetting = document.getElementById('stamp-pos').value;
+
+            // ข้อมูลสำหรับ F8 (ลายน้ำ)
+            const wmText = document.getElementById('wm-text').value.trim();
+            const wmSize = parseInt(document.getElementById('wm-size').value) || 50;
+            const wmAngleVal = parseInt(document.getElementById('wm-angle').value) || 45;
+            const wmColorType = document.getElementById('wm-color').value;
+            let wmColorRgb = rgb(0.85, 0.2, 0.2); // red default
+            if (wmColorType === 'gray') wmColorRgb = rgb(0.5, 0.5, 0.5);
+            else if (wmColorType === 'blue') wmColorRgb = rgb(0.1, 0.3, 0.8);
+
+            const docCache = new Map();
+            const cards = Array.from(container.children);
+
+            for (let i = 0; i < cards.length; i++) {
+                document.getElementById('loading-status').innerText = `กำลังรวมหน้าที่ ${i + 1} จาก ${cards.length}...`;
+                const card = cards[i];
+                let src = docCache.get(card._pdfBytes);
+                if (!src) {
+                    src = await PDFDocument.load(card._pdfBytes, { ignoreEncryption: true });
+                    docCache.set(card._pdfBytes, src);
+                }
+
                 const [page] = await finalPdf.copyPages(src, [card._originalIdx]);
-                const rot = parseInt(card.dataset.rotation);
+                const rot = parseInt(card.dataset.rotation || 0);
                 const totalRot = (page.getRotation().angle + rot) % 360;
                 page.setRotation(degrees(totalRot));
 
-                if (isMasterEnabled && card.querySelector('.toggle-print').checked && font) {
-                    const { width, height } = page.getSize();
-                    const text = getFormattedNumberText(startNum + i, totalPages, type, format); 
+                const { width, height } = page.getSize();
+                const vW = (totalRot === 90 || totalRot === 270) ? height : width;
+                const vH = (totalRot === 90 || totalRot === 270) ? width : height;
+
+                // 1) ประทับลายน้ำ (F8)
+                if (wmEnabled && wmText) {
+                    const tw = fontBold.widthOfTextAtSize(wmText, wmSize);
+                    const cx = width / 2;
+                    const cy = height / 2;
+                    page.drawText(wmText, {
+                        x: cx - (tw / 2) * Math.cos(wmAngleVal * Math.PI / 180),
+                        y: cy - (tw / 2) * Math.sin(wmAngleVal * Math.PI / 180),
+                        size: wmSize,
+                        font: fontBold,
+                        color: wmColorRgb,
+                        opacity: 0.18,
+                        rotate: degrees(wmAngleVal + totalRot)
+                    });
+                }
+
+                // 2) รันเลขหน้า
+                if (isMasterEnabled && card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked && font) {
+                    const text = getFormattedNumberText(numbers[i], total, type, format); 
                     const tw = font.widthOfTextAtSize(text, fSize);
                     let margin = 40;
-                    const vW = (totalRot === 90 || totalRot === 270) ? height : width;
-                    const vH = (totalRot === 90 || totalRot === 270) ? width : height;
                     let tx, ty;
                     if(posType === 'TR') { tx = vW - tw - margin + ox; ty = vH - margin - fSize + oy; }
                     else if(posType === 'TC') { tx = (vW - tw)/2 + ox; ty = vH - margin - fSize + oy; }
@@ -598,18 +1361,79 @@
                     else if(totalRot === 270) { fx = ty; fy = height - tx - tw; }
                     page.drawText(text, { x: fx, y: fy, size: fSize, font, rotate: degrees(totalRot) });
                 }
+
+                // 3) ประทับตรายางรับหนังสือ (F7)
+                const shouldStamp = stampEnabled && (stampPageSetting === 'all' || i === 0);
+                if (shouldStamp) {
+                    const boxW = 160;
+                    const boxH = 75;
+                    const marginEdge = 25;
+                    let bx = (stampPosSetting === 'TR') ? (vW - boxW - marginEdge) : marginEdge;
+                    let by = vH - boxH - marginEdge;
+
+                    let fbx = bx, fby = by;
+                    if (totalRot === 90) { fbx = width - by - boxH; fby = bx; }
+                    else if (totalRot === 180) { fbx = width - bx - boxW; fby = height - by - boxH; }
+                    else if (totalRot === 270) { fbx = by; fby = height - bx - boxW; }
+
+                    // วาดกรอบตรายาง
+                    page.drawRectangle({
+                        x: fbx, y: fby, width: boxW, height: boxH,
+                        borderWidth: 1.5,
+                        borderColor: rgb(0.1, 0.25, 0.7),
+                        color: rgb(1, 1, 1),
+                        opacity: 0.92,
+                        rotate: degrees(totalRot)
+                    });
+
+                    // เขียนข้อความในตรายาง
+                    const lines = [
+                        { text: stampDept, size: 12, bold: true, offY: 58 },
+                        { text: `เลขรับ: ${stampNo || '........................'}`, size: 11, bold: false, offY: 42 },
+                        { text: `วันที่: ${stampDate || '........................'}`, size: 11, bold: false, offY: 26 },
+                        { text: `เวลา: ${stampTime || '........................'}`, size: 11, bold: false, offY: 10 }
+                    ];
+
+                    for (const line of lines) {
+                        const curFont = line.bold ? fontBold : font;
+                        const lineTw = curFont.widthOfTextAtSize(line.text, line.size);
+                        const lineX = line.bold ? (bx + (boxW - lineTw) / 2) : (bx + 8);
+                        const lineY = by + line.offY;
+
+                        let flx = lineX, fly = lineY;
+                        if (totalRot === 90) { flx = width - lineY - line.size; fly = lineX; }
+                        else if (totalRot === 180) { flx = width - lineX - lineTw; fly = height - lineY - line.size; }
+                        else if (totalRot === 270) { flx = lineY; fly = height - lineX - lineTw; }
+
+                        page.drawText(line.text, {
+                            x: flx, y: fly,
+                            size: line.size,
+                            font: curFont,
+                            color: rgb(0.1, 0.25, 0.7),
+                            rotate: degrees(totalRot)
+                        });
+                    }
+                }
+
                 finalPdf.addPage(page);
             }
-            const blob = new Blob([await finalPdf.save()], {type:'application/pdf'});
+
+            document.getElementById('loading-status').innerText = 'กำลังสร้างไฟล์ PDF สำเร็จรูป...';
+            const pdfBytesOut = await finalPdf.save();
+            const blob = new Blob([pdfBytesOut], { type: 'application/pdf' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `PEO_PDF_${Date.now()}.pdf`;
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+            a.download = `PEO_PDF_${dateStr}.pdf`;
             a.click();
+            setTimeout(() => URL.revokeObjectURL(a.href), 15000);
         } catch(e) { 
             console.error(e); 
             showAlert(`เกิดข้อผิดพลาดในการประมวลผล:\n${e.message}`); 
+        } finally {
+            loading.style.display = 'none';
         }
-        loading.style.display = 'none';
     };
 
     function updateFormatOptions() {
@@ -617,17 +1441,20 @@
         const fmt = document.getElementById('num-format');
         const currentValue = fmt.value;
         
-        const startNum = parseInt(document.getElementById('start-num').value) || 1;
+        const startNum = Math.max(1, parseInt(document.getElementById('start-num').value) || 1);
+        const { numbers, total } = calculatePageNumbers(startNum);
+        const endNum = numbers[numbers.length - 1] || (startNum + total - 1);
+        
         let p = startNum.toString();
-        let t = (startNum + 8).toString(); 
+        let t = endNum.toString(); 
         
         if (type === 'thai') {
             p = p.replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
             t = t.replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
         } else if (type === 'thai-alpha') {
             const alphabet = "กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสฬอฮ";
-            p = alphabet[(startNum-1) % alphabet.length];
-            t = alphabet[(startNum+8) % alphabet.length];
+            p = alphabet[(startNum - 1) % alphabet.length];
+            t = alphabet[(endNum - 1) % alphabet.length];
         }
 
         fmt.innerHTML = `
@@ -647,6 +1474,7 @@
 
     async function zoomCard(card) {
         loading.style.display = 'flex';
+        document.getElementById('loading-status').innerText = 'กำลังโหลดภาพขยาย...';
         try {
             const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(card._pdfBytes) }).promise;
             const page = await pdf.getPage(card._originalIdx + 1);
@@ -656,7 +1484,8 @@
             await page.render({ canvasContext: zCanvas.getContext('2d'), viewport }).promise;
             const zoomPreview = document.getElementById('zoom-number-preview');
             const isMasterEnabled = document.getElementById('master-num-toggle').checked;
-            const isPrint = card.querySelector('.toggle-print').checked;
+            const isPrint = card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked;
+            
             if (!isPreviewOpen || !isPrint || !isMasterEnabled) {
                 zoomPreview.style.display = 'none';
             } else {
@@ -670,11 +1499,13 @@
                 const oy = (parseInt(document.getElementById('offset-y').value) || 0) * 1.5;
                 const baseFontSize = parseInt(document.getElementById('font-size').value) || 16;
                 const paddingEdge = 60; 
-                const totalPages = container.children.length;
-                const startNum = parseInt(document.getElementById('start-num').value) || 1; 
-                const pageIndex = Array.from(container.children).indexOf(card);
                 
-                zoomPreview.innerText = getFormattedNumberText(startNum + pageIndex, totalPages, type, format);
+                const startNum = Math.max(1, parseInt(document.getElementById('start-num').value) || 1); 
+                const pageIndex = Array.from(container.children).indexOf(card);
+                const { numbers, total } = calculatePageNumbers(startNum);
+                const curNum = numbers[pageIndex] || (startNum + pageIndex);
+                
+                zoomPreview.innerText = getFormattedNumberText(curNum, total, type, format);
                 zoomPreview.style.fontWeight = isBold ? 'bold' : 'normal';
                 zoomPreview.style.fontStyle = isItalic ? 'italic' : 'normal';
                 zoomPreview.style.fontSize = (baseFontSize * 1.5) + 'px'; 
@@ -687,14 +1518,19 @@
                 
                 zoomPreview.style.display = 'block';
             }
+            document.getElementById('zoom-modal').style.display = 'flex';
         } catch (e) {
             console.error(e);
+            showAlert(`เกิดข้อผิดพลาดในการขยายภาพ:\n${e.message}`);
+        } finally {
+            loading.style.display = 'none';
         }
-        loading.style.display = 'none';
-        document.getElementById('zoom-modal').style.display = 'flex';
     }
 
-    window.onload = () => { updateFormatOptions(); saveHistory(); };
+    window.onload = () => { 
+        updateFormatOptions(); 
+        saveHistory(); 
+    };
 </script>
 </body>
 </html>
