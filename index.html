@@ -87,6 +87,12 @@
         .batch-bar { background: var(--card-bg); border: 1px solid var(--primary); border-radius: 8px; padding: 8px 14px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; box-shadow: 0 2px 6px rgba(0,86,179,0.08); }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
+        #alert-modal { z-index: 10050; }
+        .dept-settings-list { max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px; }
+        .dept-item-row { display: flex; align-items: center; gap: 6px; background: var(--bg); padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); }
+        .dept-drag-handle { cursor: grab; font-size: 16px; color: #888; user-select: none; padding: 0 4px; }
+        .dept-drag-handle:active { cursor: grabbing; }
+        .dept-item-input { flex: 1; height: 28px !important; font-size: 12.5px !important; }
         .modal-box { background: var(--card-bg); color: var(--text); padding: 20px 24px; border-radius: 12px; max-width: 540px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid var(--border); position: relative; max-height: 90vh; overflow-y: auto; }
         .modal-title { font-size: 17px; font-weight: bold; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
         .modal-body { font-size: 13.5px; line-height: 1.6; margin-bottom: 16px; }
@@ -159,6 +165,7 @@
         <span style="font-size:11px; background:var(--success); color:white; padding:3px 10px; border-radius:12px; font-weight:bold;">v1.6.0 Offline + สารบรรณ</span>
     </div>
     <div class="header-actions">
+        <button type="button" class="btn btn-secondary" style="font-size:12px; height:30px; padding:2px 10px;" onclick="openSettingsModal()">⚙️ ตั้งค่าระบบ</button>
         <button type="button" class="btn btn-warning" style="font-size:12px; height:30px; padding:2px 12px;" onclick="openManualModal()">📖 คู่มือการใช้งานราชการ</button>
         <button class="theme-switch" onclick="toggleTheme()" id="theme-btn">🌙 Dark Mode</button>
     </div>
@@ -286,19 +293,8 @@
                     </div>
                     <div class="form-row">
                         <label>สังกัด/กลุ่ม:</label>
-                        <select id="stamp-dept-select" style="height:28px;" onchange="onStampDeptChange()">
-                            <option value="สำนักงานศึกษาธิการจังหวัดอุดรธานี">สำนักงานศึกษาธิการจังหวัดอุดรธานี</option>
-                            <option value="กลุ่มอำนวยการ">กลุ่มอำนวยการ</option>
-                            <option value="กลุ่มบริหารงานบุคคล">กลุ่มบริหารงานบุคคล</option>
-                            <option value="กลุ่มนโยบายและแผน">กลุ่มนโยบายและแผน</option>
-                            <option value="กลุ่มพัฒนาการศึกษา">กลุ่มพัฒนาการศึกษา</option>
-                            <option value="กลุ่มนิเทศ ติดตาม และประเมินผล">กลุ่มนิเทศ ติดตาม และประเมินผล</option>
-                            <option value="กลุ่มส่งเสริมการศึกษาเอกชน">กลุ่มส่งเสริมการศึกษาเอกชน</option>
-                            <option value="กลุ่มลูกเสือ ยุวกาชาด และกิจการนักเรียน">กลุ่มลูกเสือ ยุวกาชาด และกิจการนักเรียน</option>
-                            <option value="หน่วยตรวจสอบภายใน">หน่วยตรวจสอบภายใน</option>
-                            <option value="คุรุสภา">คุรุสภา</option>
-                            <option value="__other__">อื่น ๆ (ระบุเอง)</option>
-                        </select>
+                        <select id="stamp-dept-select" style="height:28px;" onchange="onStampDeptChange()"></select>
+                        <button type="button" class="btn btn-secondary" style="height:28px; width:28px; padding:0; justify-content:center; flex-shrink:0;" onclick="openSettingsModal()" title="จัดการรายชื่อสังกัด/กลุ่ม">⚙️</button>
                     </div>
                     <div id="stamp-dept-custom-row" class="form-row" style="display:none;">
                         <label>ระบุสังกัด:</label>
@@ -458,6 +454,31 @@
     <div id="pdf-container"></div>
 </div>
 
+<!-- System Settings Modal -->
+<div id="settings-modal" class="modal-overlay" onclick="if(event.target === this) closeSettingsModal()">
+    <div class="modal-box" style="max-width: 600px;">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; border-bottom:2px solid var(--border); padding-bottom:8px;">
+            <div class="modal-title" style="margin:0;">⚙️ ตั้งค่าระบบ — รายชื่อสังกัด / กลุ่ม</div>
+            <button type="button" class="btn btn-secondary" style="height:28px; padding:2px 8px;" onclick="closeSettingsModal()">✖ ปิด</button>
+        </div>
+        <div class="modal-body" style="margin-bottom:10px;">
+            <p style="margin:0 0 10px 0; font-size:12.5px; color:#666;">เพิ่ม แก้ไข ลบ หรือลากสลับลำดับรายการใน Dropdown (บันทึกไว้ในเบราว์เซอร์เครื่องนี้ และคงตัวเลือก <b>"อื่น ๆ (ระบุเอง)"</b> ไว้ท้ายรายการเสมอ)</p>
+            <div style="display:flex; gap:6px; margin-bottom:12px;">
+                <input type="text" id="dept-new-input" placeholder="พิมพ์ชื่อสังกัด/กลุ่มใหม่ที่ต้องการเพิ่ม..." style="height:32px;" onkeydown="if(event.key==='Enter'){ event.preventDefault(); addDeptSettingItem(); }">
+                <button type="button" class="btn btn-primary" style="height:32px;" onclick="addDeptSettingItem()">➕ เพิ่ม</button>
+            </div>
+            <div id="dept-settings-list" class="dept-settings-list"></div>
+        </div>
+        <div class="modal-footer" style="justify-content:space-between; border-top:1px solid var(--border); padding-top:12px;">
+            <button type="button" class="btn btn-danger" style="height:32px; font-size:12px;" onclick="resetDeptSettings()">🔄 คืนค่าเริ่มต้น</button>
+            <div style="display:flex; gap:8px;">
+                <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">ยกเลิก</button>
+                <button type="button" class="btn btn-success" onclick="saveDeptSettingsFromModal()">💾 บันทึกการตั้งค่า</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Official Government User Manual Modal -->
 <div id="manual-modal" class="modal-overlay" onclick="if(event.target === this) closeManualModal()">
     <div class="modal-box manual-modal-box">
@@ -594,6 +615,21 @@
 
 <script>
     const SETTINGS_KEY = 'peo_pdf_helper_settings';
+    const DEPT_LIST_KEY = 'peo_pdf_helper_dept_list';
+    const DEFAULT_STAMP_DEPTS = [
+        'สำนักงานศึกษาธิการจังหวัดอุดรธานี',
+        'กลุ่มอำนวยการ',
+        'กลุ่มบริหารงานบุคคล',
+        'กลุ่มนโยบายและแผน',
+        'กลุ่มพัฒนาการศึกษา',
+        'กลุ่มนิเทศ ติดตาม และประเมินผล',
+        'กลุ่มส่งเสริมการศึกษาเอกชน',
+        'กลุ่มลูกเสือ ยุวกาชาด และกิจการนักเรียน',
+        'หน่วยตรวจสอบภายใน',
+        'คุรุสภา'
+    ];
+    let editingDeptList = [];
+    let deptSortable = null;
     const FILE_COLORS = ['#0056b3', '#28a745', '#d9534f', '#8e44ad', '#e67e22', '#17a2b8', '#c0392b', '#16a085'];
     let fileColorCounter = 0;
     let lastSelectedCard = null;
@@ -619,6 +655,175 @@
 
     function closeManualModal() {
         document.getElementById('manual-modal').style.display = 'none';
+    }
+
+    // -------------------------------------------------------------
+    // System Settings Modal (Department Dropdown CRUD + Reorder)
+    // -------------------------------------------------------------
+    function getStoredDeptList() {
+        try {
+            const raw = localStorage.getItem(DEPT_LIST_KEY);
+            if (raw) {
+                const arr = JSON.parse(raw);
+                if (Array.isArray(arr)) {
+                    return arr.map(x => String(x).trim()).filter(Boolean);
+                }
+            }
+        } catch (e) {}
+        return [...DEFAULT_STAMP_DEPTS];
+    }
+
+    function saveStoredDeptList(list) {
+        try {
+            localStorage.setItem(DEPT_LIST_KEY, JSON.stringify(list));
+        } catch (e) {}
+    }
+
+    function renderStampDeptDropdown(preferredVal = null) {
+        const sel = document.getElementById('stamp-dept-select');
+        if (!sel) return;
+        const prevVal = preferredVal !== null ? preferredVal : sel.value;
+        const list = getStoredDeptList();
+
+        sel.innerHTML = '';
+        list.forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.innerText = name;
+            sel.appendChild(opt);
+        });
+
+        const otherOpt = document.createElement('option');
+        otherOpt.value = '__other__';
+        otherOpt.innerText = 'อื่น ๆ (ระบุเอง)';
+        sel.appendChild(otherOpt);
+
+        if (prevVal && Array.from(sel.options).some(o => o.value === prevVal)) {
+            sel.value = prevVal;
+        } else if (list.length > 0) {
+            sel.value = list[0];
+        } else {
+            sel.value = '__other__';
+        }
+    }
+
+    function syncWorkingDeptValuesFromDOM() {
+        const inputs = document.querySelectorAll('#dept-settings-list .dept-item-input');
+        if (inputs.length) {
+            editingDeptList = Array.from(inputs).map(inp => inp.value);
+        }
+    }
+
+    function renderDeptSettingsList() {
+        const listEl = document.getElementById('dept-settings-list');
+        if (!listEl) return;
+        listEl.innerHTML = '';
+
+        if (!editingDeptList.length) {
+            listEl.innerHTML = '<div style="text-align:center; padding:15px; color:#888; font-size:12.5px;">ยังไม่มีรายชื่อในรายการ กรุณาเพิ่มรายการด้านบน หรือกดคืนค่าเริ่มต้นค่ะ</div>';
+            return;
+        }
+
+        editingDeptList.forEach((name, idx) => {
+            const row = document.createElement('div');
+            row.className = 'dept-item-row';
+            row.innerHTML = `
+                <span class="dept-drag-handle" title="ลากเพื่อเปลี่ยนลำดับ">⠿</span>
+                <span style="font-size:11px; color:#888; min-width:20px;">${idx + 1}.</span>
+                <input type="text" class="dept-item-input" value="${escapeHtml(name)}">
+                <button type="button" class="btn btn-secondary" style="height:26px; padding:0 7px; font-size:11px;" onclick="moveDeptItem(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} title="เลื่อนขึ้น">⬆️</button>
+                <button type="button" class="btn btn-secondary" style="height:26px; padding:0 7px; font-size:11px;" onclick="moveDeptItem(${idx}, 1)" ${idx === editingDeptList.length - 1 ? 'disabled' : ''} title="เลื่อนลง">⬇️</button>
+                <button type="button" class="btn btn-danger" style="height:26px; padding:0 7px; font-size:11px;" onclick="deleteDeptItem(${idx})" title="ลบรายการนี้">🗑️</button>
+            `;
+            listEl.appendChild(row);
+        });
+    }
+
+    function openSettingsModal() {
+        editingDeptList = getStoredDeptList();
+        renderDeptSettingsList();
+        const listEl = document.getElementById('dept-settings-list');
+        if (deptSortable) {
+            deptSortable.destroy();
+            deptSortable = null;
+        }
+        deptSortable = new Sortable(listEl, {
+            handle: '.dept-drag-handle',
+            animation: 150,
+            onEnd: () => {
+                syncWorkingDeptValuesFromDOM();
+                renderDeptSettingsList();
+            }
+        });
+        document.getElementById('dept-new-input').value = '';
+        document.getElementById('settings-modal').style.display = 'flex';
+    }
+
+    function closeSettingsModal() {
+        document.getElementById('settings-modal').style.display = 'none';
+    }
+
+    function addDeptSettingItem() {
+        syncWorkingDeptValuesFromDOM();
+        const inp = document.getElementById('dept-new-input');
+        const newName = (inp.value || '').trim();
+        if (!newName) {
+            showAlert('กรุณากรอกชื่อสังกัดหรือกลุ่มที่ต้องการเพิ่มก่อนค่ะ');
+            inp.focus();
+            return;
+        }
+        if (editingDeptList.some(item => item.trim() === newName)) {
+            showAlert(`มีชื่อ "${newName}" อยู่ในรายการแล้วค่ะ`);
+            inp.focus();
+            return;
+        }
+        editingDeptList.push(newName);
+        inp.value = '';
+        renderDeptSettingsList();
+        const listEl = document.getElementById('dept-settings-list');
+        listEl.scrollTop = listEl.scrollHeight;
+        inp.focus();
+    }
+
+    function moveDeptItem(idx, delta) {
+        syncWorkingDeptValuesFromDOM();
+        const target = idx + delta;
+        if (target < 0 || target >= editingDeptList.length) return;
+        const temp = editingDeptList[idx];
+        editingDeptList[idx] = editingDeptList[target];
+        editingDeptList[target] = temp;
+        renderDeptSettingsList();
+    }
+
+    function deleteDeptItem(idx) {
+        syncWorkingDeptValuesFromDOM();
+        editingDeptList.splice(idx, 1);
+        renderDeptSettingsList();
+    }
+
+    function resetDeptSettings() {
+        showConfirm('ต้องการคืนค่ารายชื่อสังกัด/กลุ่มกลับเป็นค่าเริ่มต้น 10 รายการใช่ไหมคะ?', () => {
+            editingDeptList = [...DEFAULT_STAMP_DEPTS];
+            renderDeptSettingsList();
+        });
+    }
+
+    function saveDeptSettingsFromModal() {
+        syncWorkingDeptValuesFromDOM();
+        const cleaned = [];
+        const seen = new Set();
+        for (const rawName of editingDeptList) {
+            const name = String(rawName).trim();
+            if (name && !seen.has(name)) {
+                seen.add(name);
+                cleaned.push(name);
+            }
+        }
+        const currentSelected = document.getElementById('stamp-dept-select').value;
+        saveStoredDeptList(cleaned);
+        renderStampDeptDropdown(currentSelected);
+        onStampDeptChange();
+        closeSettingsModal();
     }
 
     function toggleAdvancedPanel() {
@@ -993,6 +1198,7 @@
             document.documentElement.setAttribute('data-theme', 'dark');
             document.getElementById('theme-btn').innerText = '☀️ Light Mode';
         }
+        renderStampDeptDropdown();
         loadSettings();
         syncStampNumberUI(false);
         setDefaultStampValues();
@@ -2157,16 +2363,20 @@
         const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
 
         if (e.key === 'Escape') {
+            if (document.getElementById('alert-modal').style.display === 'flex') {
+                closeAlert(false);
+                return;
+            }
+            if (document.getElementById('settings-modal').style.display === 'flex') {
+                closeSettingsModal();
+                return;
+            }
             if (document.getElementById('zoom-modal').style.display === 'flex') {
                 document.getElementById('zoom-modal').style.display = 'none';
                 return;
             }
             if (document.getElementById('manual-modal').style.display === 'flex') {
                 closeManualModal();
-                return;
-            }
-            if (document.getElementById('alert-modal').style.display === 'flex') {
-                closeAlert(false);
                 return;
             }
             selectAllCards(false);
