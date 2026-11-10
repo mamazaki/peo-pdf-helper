@@ -2187,6 +2187,20 @@
         return `PEO_PDF_${dateStr}.pdf`;
     }
 
+    function mapVisualPointToRaw(vx, vy, box, totalRot) {
+        if (totalRot === 90) return { x: box.x + box.width - vy, y: box.y + vx };
+        if (totalRot === 180) return { x: box.x + box.width - vx, y: box.y + box.height - vy };
+        if (totalRot === 270) return { x: box.x + vy, y: box.y + box.height - vx };
+        return { x: box.x + vx, y: box.y + vy };
+    }
+
+    function mapVisualRectToRaw(bx, by, bw, bh, box, totalRot) {
+        if (totalRot === 90) return { x: box.x + box.width - by - bh, y: box.y + bx, width: bh, height: bw };
+        if (totalRot === 180) return { x: box.x + box.width - bx - bw, y: box.y + box.height - by - bh, width: bw, height: bh };
+        if (totalRot === 270) return { x: box.x + by, y: box.y + box.height - bx - bw, width: bh, height: bw };
+        return { x: box.x + bx, y: box.y + by, width: bw, height: bh };
+    }
+
     // -------------------------------------------------------------
     // Export Final PDF with Numbering + Stamp + Watermark
     // -------------------------------------------------------------
@@ -2198,7 +2212,7 @@
         showLoading('กำลังจัดเตรียมไฟล์ PDF...', 5, true);
         
         try {
-            const { PDFDocument, degrees, rgb } = PDFLib;
+            const { PDFDocument, degrees, rgb, pushGraphicsState, popGraphicsState } = PDFLib;
             const finalPdf = await PDFDocument.create();
             finalPdf.registerFontkit(fontkit);
 
@@ -2262,21 +2276,29 @@
 
                 const [page] = await finalPdf.copyPages(src, [card._originalIdx]);
                 const rot = parseInt(card.dataset.rotation || 0);
-                const totalRot = (page.getRotation().angle + rot) % 360;
+                const totalRot = (((page.getRotation().angle + rot) % 360) + 360) % 360;
                 page.setRotation(degrees(totalRot));
 
-                const { width, height } = page.getSize();
+                // Isolate any leftover CTM/graphics state in the source PDF page
+                if (typeof page.node.normalize === 'function') page.node.normalize();
+                const qStart = finalPdf.context.register(page.createContentStream(pushGraphicsState()));
+                const qEnd = finalPdf.context.register(page.createContentStream(popGraphicsState()));
+                page.node.wrapContentStreams(qStart, qEnd);
+
+                const cropBox = page.getCropBox ? page.getCropBox() : { x: 0, y: 0, ...page.getSize() };
+                const { width, height } = cropBox;
                 const vW = (totalRot === 90 || totalRot === 270) ? height : width;
                 const vH = (totalRot === 90 || totalRot === 270) ? width : height;
 
                 // 1) ประทับลายน้ำ
                 if (wmEnabled && wmText) {
                     const tw = fontBold.widthOfTextAtSize(wmText, wmSize);
-                    const cx = width / 2;
-                    const cy = height / 2;
+                    const rcx = cropBox.x + width / 2;
+                    const rcy = cropBox.y + height / 2;
+                    const theta = (wmAngleVal + totalRot) * Math.PI / 180;
                     page.drawText(wmText, {
-                        x: cx - (tw / 2) * Math.cos(wmAngleVal * Math.PI / 180),
-                        y: cy - (tw / 2) * Math.sin(wmAngleVal * Math.PI / 180),
+                        x: rcx - (tw / 2) * Math.cos(theta),
+                        y: rcy - (tw / 2) * Math.sin(theta),
                         size: wmSize,
                         font: fontBold,
                         color: wmColorRgb,
@@ -2296,11 +2318,8 @@
                     else if(posType === 'TC') { tx = (vW - tw)/2 + ox; ty = vH - margin - fSize + oy; }
                     else if(posType === 'BR') { tx = vW - tw - margin + ox; ty = margin + oy; }
                     else if(posType === 'BC') { tx = (vW - tw)/2 + ox; ty = margin + oy; }
-                    let fx = tx, fy = ty;
-                    if(totalRot === 90) { fx = width - ty - fSize; fy = tx; }
-                    else if(totalRot === 180) { fx = width - tx - tw; fy = height - ty - fSize; }
-                    else if(totalRot === 270) { fx = ty; fy = height - tx - tw; }
-                    page.drawText(text, { x: fx, y: fy, size: fSize, font, rotate: degrees(totalRot) });
+                    const pt = mapVisualPointToRaw(tx, ty, cropBox, totalRot);
+                    page.drawText(text, { x: pt.x, y: pt.y, size: fSize, font, rotate: degrees(totalRot) });
                 }
 
                 // 3) ประทับตรายางรับหนังสือ
@@ -2318,16 +2337,14 @@
                     let bx = (stampPosSetting === 'TR') ? (vW - boxW - marginEdge) : marginEdge;
                     let by = vH - boxH - marginEdge;
 
-                    let fbx = bx, fby = by;
-                    if (totalRot === 90) { fbx = width - by - boxH; fby = bx; }
-                    else if (totalRot === 180) { fbx = width - bx - boxW; fby = height - by - boxH; }
-                    else if (totalRot === 270) { fbx = by; fby = height - bx - boxW; }
-
+                    const rawRect = mapVisualRectToRaw(bx, by, boxW, boxH, cropBox, totalRot);
                     page.drawRectangle({
-                        x: fbx, y: fby, width: boxW, height: boxH,
+                        x: rawRect.x,
+                        y: rawRect.y,
+                        width: rawRect.width,
+                        height: rawRect.height,
                         borderWidth: 1.5,
-                        borderColor: rgb(0.1, 0.25, 0.7),
-                        rotate: degrees(totalRot)
+                        borderColor: rgb(0.1, 0.25, 0.7)
                     });
 
                     const lines = [
@@ -2342,14 +2359,11 @@
                         const lineTw = curFont.widthOfTextAtSize(line.text, line.size);
                         const lineX = line.bold ? (bx + (boxW - lineTw) / 2) : (bx + 8);
                         const lineY = by + line.offY;
-
-                        let flx = lineX, fly = lineY;
-                        if (totalRot === 90) { flx = width - lineY - line.size; fly = lineX; }
-                        else if (totalRot === 180) { flx = width - lineX - lineTw; fly = height - lineY - line.size; }
-                        else if (totalRot === 270) { flx = lineY; fly = height - lineX - lineTw; }
+                        const rawPt = mapVisualPointToRaw(lineX, lineY, cropBox, totalRot);
 
                         page.drawText(line.text, {
-                            x: flx, y: fly,
+                            x: rawPt.x,
+                            y: rawPt.y,
                             size: line.size,
                             font: curFont,
                             color: rgb(0.1, 0.25, 0.7),
