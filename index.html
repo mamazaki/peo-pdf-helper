@@ -203,9 +203,15 @@
             </div>
         </div>
 
-        <div id="toolbar-start-num-group" class="input-group" style="width: 80px; transition: opacity 0.2s;">
-            <label>เริ่มที่หน้า:</label>
-            <input type="number" id="start-num" value="1" min="1" oninput="updateFormatOptions(); if(isPreviewOpen) updatePreviewNumbers();">
+        <div id="toolbar-start-num-group" style="display:flex; gap:8px; transition: opacity 0.2s;">
+            <div class="input-group" style="width: 82px; min-width: 82px;">
+                <label>เริ่มพิมพ์แผ่นที่:</label>
+                <input type="number" id="start-sheet" value="1" min="1" title="เริ่มพิมพ์เลขตั้งแต่ลำดับแผ่นที่ (เช่น ใส่ 2 เพื่อข้ามแผ่นที่ 1)" oninput="updateFormatOptions(); saveSettings(); if(isPreviewOpen) updatePreviewNumbers();">
+            </div>
+            <div class="input-group" style="width: 78px; min-width: 78px;">
+                <label>เริ่มนับเลขที่:</label>
+                <input type="number" id="start-num" value="1" min="1" title="ตัวเลขเริ่มต้นที่จะพิมพ์ (เช่น 1 หรือต่อจากหน้า 15)" oninput="updateFormatOptions(); saveSettings(); if(isPreviewOpen) updatePreviewNumbers();">
+            </div>
         </div>
 
         <div id="toolbar-num-format-group" class="input-group" style="border-left: 1px solid var(--border); padding-left: 10px; transition: opacity 0.2s;">
@@ -1094,7 +1100,7 @@
         const overrideBadge = document.getElementById('section-override-badge');
         const hint = document.getElementById('section-num-hint');
 
-        ['start-num', 'num-type', 'num-format'].forEach(id => {
+        ['start-sheet', 'start-num', 'num-type', 'num-format'].forEach(id => {
             const el = document.getElementById(id);
             if (el) el.disabled = enabled;
         });
@@ -1137,6 +1143,8 @@
                 numPos: document.getElementById('num-pos').value,
                 offsetX: document.getElementById('offset-x').value,
                 offsetY: document.getElementById('offset-y').value,
+                startSheet: document.getElementById('start-sheet').value,
+                startNum: document.getElementById('start-num').value,
                 masterNum: document.getElementById('master-num-toggle').checked,
                 stampEnable: document.getElementById('stamp-enable').checked,
                 stampThaiNum: document.getElementById('stamp-thai-num').checked,
@@ -1170,6 +1178,8 @@
             if (s.numPos) document.getElementById('num-pos').value = s.numPos;
             if (s.offsetX !== undefined) document.getElementById('offset-x').value = s.offsetX;
             if (s.offsetY !== undefined) document.getElementById('offset-y').value = s.offsetY;
+            if (s.startSheet !== undefined) document.getElementById('start-sheet').value = s.startSheet;
+            if (s.startNum !== undefined) document.getElementById('start-num').value = s.startNum;
             if (s.masterNum !== undefined) {
                 document.getElementById('master-num-toggle').checked = s.masterNum;
                 const textLabel = document.getElementById('master-toggle-text');
@@ -1950,31 +1960,47 @@
     // -------------------------------------------------------------
     // Sequence calculation (supports Multi-Section + Skip-Unprinted)
     // -------------------------------------------------------------
-    function calculatePageNumbers(startNum) {
+    function calculatePageNumbers(startNum, startSheet = null) {
         const cards = Array.from(container.children);
         const skipUnprinted = document.getElementById('skip-unprinted-count').checked;
         const useSections = document.getElementById('section-num-enable').checked;
         const globalType = document.getElementById('num-type').value;
         const globalFormat = document.getElementById('num-format').value || '{n}';
+        if (startSheet === null) {
+            const ssEl = document.getElementById('start-sheet');
+            startSheet = Math.max(1, parseInt(ssEl ? ssEl.value : 1) || 1);
+        }
 
         if (!useSections) {
             const numbers = [];
+            const shouldPrintFlags = [];
             let cur = startNum;
             let printableTotal = 0;
+            let activeTotal = 0;
 
             for (let i = 0; i < cards.length; i++) {
-                const isPrint = cards[i].querySelector('.toggle-print') && cards[i].querySelector('.toggle-print').checked;
-                if (isPrint) {
+                const sheetNo = i + 1;
+                const cardPrint = !!(cards[i].querySelector('.toggle-print') && cards[i].querySelector('.toggle-print').checked);
+                if (sheetNo < startSheet) {
                     numbers.push(cur);
+                    shouldPrintFlags.push(false);
+                    continue;
+                }
+                activeTotal++;
+                if (cardPrint) {
+                    numbers.push(cur);
+                    shouldPrintFlags.push(true);
                     cur++;
                     printableTotal++;
                 } else {
                     numbers.push(cur);
+                    shouldPrintFlags.push(false);
                     if (!skipUnprinted) cur++;
                 }
             }
-            const total = skipUnprinted ? Math.max(printableTotal, 1) : Math.max(cards.length, 1);
+            const total = skipUnprinted ? Math.max(printableTotal, 1) : Math.max(activeTotal, 1);
             const perPage = cards.map((_, i) => ({
+                shouldPrint: shouldPrintFlags[i],
                 num: numbers[i],
                 total: total,
                 type: globalType,
@@ -2007,7 +2033,7 @@
                 sectionState.set(rule, { cur: rule.startNum, allCount: 0, printableCount: 0 });
             }
             const st = sectionState.get(rule);
-            const isPrint = card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked;
+            const isPrint = !!(card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked);
             const assignedNum = st.cur;
             st.allCount++;
             if (isPrint) {
@@ -2016,13 +2042,14 @@
             } else if (!skipUnprinted) {
                 st.cur++;
             }
-            return { rule, num: assignedNum };
+            return { rule, num: assignedNum, shouldPrint: isPrint };
         });
 
         const finalPerPage = perPage.map(entry => {
             const st = sectionState.get(entry.rule);
             const secTotal = skipUnprinted ? Math.max(st.printableCount, 1) : Math.max(st.allCount, 1);
             return {
+                shouldPrint: entry.shouldPrint,
                 num: entry.num,
                 total: secTotal,
                 type: entry.rule.type,
@@ -2111,16 +2138,14 @@
 
         Array.from(container.children).forEach((card, i) => {
             const preview = card.querySelector('.number-preview');
-            const isPrint = card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked;
+            const cfg = perPage[i];
             
-            if (!isPreviewOpen || !isPrint || !isMasterEnabled) { 
+            if (!isPreviewOpen || !isMasterEnabled || !cfg || !cfg.shouldPrint) { 
                 if (preview) preview.style.display = 'none'; 
                 return; 
             }
 
             preview.style.display = 'block';
-            
-            const cfg = perPage[i];
             preview.innerText = getFormattedNumberText(cfg.num, cfg.total, cfg.type, cfg.format);
             
             preview.style.fontWeight = isBold ? 'bold' : 'normal';
@@ -2261,8 +2286,8 @@
                 }
 
                 // 2) รันเลขหน้า
-                if (isMasterEnabled && card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked && font) {
-                    const cfg = perPage[i];
+                const cfg = perPage[i];
+                if (isMasterEnabled && cfg && cfg.shouldPrint && font) {
                     const text = getFormattedNumberText(cfg.num, cfg.total, cfg.type, cfg.format); 
                     const tw = font.widthOfTextAtSize(text, fSize);
                     let margin = 40;
@@ -2368,8 +2393,9 @@
         const fmt = document.getElementById('num-format');
         const currentValue = fmt.value;
         
+        const startSheet = Math.max(1, parseInt(document.getElementById('start-sheet').value) || 1);
         const startNum = Math.max(1, parseInt(document.getElementById('start-num').value) || 1);
-        const totalPages = Math.max(container.children.length, 1);
+        const totalPages = Math.max(container.children.length - startSheet + 1, 1);
         const endNum = startNum + totalPages - 1;
         
         let p = startNum.toString();
@@ -2413,13 +2439,15 @@
 
             const zoomPreview = document.getElementById('zoom-number-preview');
             const isMasterEnabled = document.getElementById('master-num-toggle').checked;
-            const isPrint = card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked;
             const pageIndex = Array.from(container.children).indexOf(card);
+            const startNum = Math.max(1, parseInt(document.getElementById('start-num').value) || 1); 
+            const { perPage } = calculatePageNumbers(startNum);
+            const cfg = perPage[pageIndex];
 
             applyWatermarkOverlay(document.getElementById('zoom-watermark-preview'), true);
             applyStampOverlay(document.getElementById('zoom-stamp-preview'), pageIndex, true);
             
-            if (!isPreviewOpen || !isPrint || !isMasterEnabled) {
+            if (!isPreviewOpen || !isMasterEnabled || !cfg || !cfg.shouldPrint) {
                 zoomPreview.style.display = 'none';
             } else {
                 const posType = document.getElementById('num-pos').value;
@@ -2430,10 +2458,6 @@
                 const oy = (parseInt(document.getElementById('offset-y').value) || 0) * 1.5;
                 const baseFontSize = parseInt(document.getElementById('font-size').value) || 16;
                 const paddingEdge = 60; 
-                
-                const startNum = Math.max(1, parseInt(document.getElementById('start-num').value) || 1); 
-                const { perPage } = calculatePageNumbers(startNum);
-                const cfg = perPage[pageIndex];
                 
                 zoomPreview.innerText = getFormattedNumberText(cfg.num, cfg.total, cfg.type, cfg.format);
                 zoomPreview.style.fontWeight = isBold ? 'bold' : 'normal';
