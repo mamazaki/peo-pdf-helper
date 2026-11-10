@@ -233,11 +233,11 @@
         </div>
     </div>
 
-    <!-- Group B Advanced Features Panel -->
+    <!-- Official Document Tools Panel -->
     <div class="advanced-bar">
         <div class="adv-header" onclick="toggleAdvancedPanel()">
             <div class="adv-title">
-                <span>🏛️ เครื่องมืองานสารบรรณและลูกเล่นเพิ่มเติม (กลุ่ม B)</span>
+                <span>🏛️ เครื่องมืองานสารบรรณและลูกเล่นเพิ่มเติม</span>
                 <span id="adv-badge" style="font-size:11px; background:#e3f2fd; color:#0056b3; padding:2px 8px; border-radius:12px; font-weight:normal;">คลิกเพื่อย่อ/ขยาย</span>
             </div>
             <div id="adv-arrow" style="font-size: 14px; color: var(--primary);">▲</div>
@@ -245,10 +245,10 @@
 
         <div id="adv-content" class="adv-content">
             <div class="adv-grid">
-                <!-- F7: ประทับเลขรับ / ตรายางสารบรรณ -->
+                <!-- ประทับเลขรับ / ตรายางสารบรรณ -->
                 <div class="adv-card">
                     <div class="adv-card-title">
-                        <span>📥 ประทับเลขรับ / ตรายางสารบรรณ (F7)</span>
+                        <span>📥 ประทับเลขรับ / ตรายางสารบรรณ</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
                         <input type="checkbox" id="stamp-enable" onchange="saveSettings();">
@@ -283,10 +283,10 @@
                     </div>
                 </div>
 
-                <!-- F8: ลายน้ำ Watermark -->
+                <!-- ลายน้ำ Watermark -->
                 <div class="adv-card">
                     <div class="adv-card-title">
-                        <span>🛡️ ประทับลายน้ำเอกสาร (F8)</span>
+                        <span>🛡️ ประทับลายน้ำเอกสาร</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
                         <input type="checkbox" id="wm-enable" onchange="saveSettings();">
@@ -326,18 +326,22 @@
                     </div>
                 </div>
 
-                <!-- F10 & F9: แทรกหน้าว่าง + แทรกรูป -->
+                <!-- แทรกหน้าว่าง + แทรกรูป -->
                 <div class="adv-card">
                     <div class="adv-card-title">
-                        <span>📄 แทรกหน้าว่าง / หน้าคั่น (F10)</span>
+                        <span>📄 แทรกหน้าว่าง / หน้าคั่น</span>
                     </div>
                     <p style="font-size:11.5px; color:#666; margin:0 0 8px 0;">เหมาะสำหรับเอกสารพิมพ์หน้า-หลัง หรือแทรกใบปะหน้าคั่นระหว่างเล่ม</p>
                     <div class="form-row">
                         <button type="button" class="btn btn-primary" style="height:30px; font-size:12px;" onclick="insertBlankPage()">➕ แทรกหน้าว่าง A4</button>
                     </div>
+                    <div class="form-row" style="margin-top:6px;">
+                        <input type="text" id="blank-page-text" placeholder="เช่น เอกสารแนบ 1" style="height:30px; font-size:12px;">
+                        <button type="button" class="btn btn-primary" style="height:30px; font-size:12px; white-space:nowrap;" onclick="insertBlankPageWithText()">➕ แทรกพร้อมข้อความ</button>
+                    </div>
                     <hr style="border:0; border-top:1px dashed var(--border); margin:10px 0;">
                     <div class="adv-card-title">
-                        <span>🖼️ แปลงรูปภาพเป็น PDF (F9)</span>
+                        <span>🖼️ แปลงรูปภาพเป็น PDF</span>
                     </div>
                     <p style="font-size:11.5px; color:#666; margin:0 0 8px 0;">รองรับไฟล์ JPG / PNG แทรกเข้าชุดเอกสารและรันเลขหน้าได้ทันที</p>
                     <label class="btn btn-info" style="display:inline-flex; width:fit-content; cursor:pointer; height:28px; font-size:12px;">
@@ -346,10 +350,10 @@
                     </label>
                 </div>
 
-                <!-- F11 & F12: แยกไฟล์ Split + ช่วงเลขหน้าแยกส่วน -->
+                <!-- แยกไฟล์ Split + ช่วงเลขหน้าแยกส่วน -->
                 <div class="adv-card">
                     <div class="adv-card-title">
-                        <span>✂️ แยกช่วงหน้า / ตัดแบ่งไฟล์ (F11)</span>
+                        <span>✂️ แยกช่วงหน้า / ตัดแบ่งไฟล์</span>
                     </div>
                     <div class="form-row">
                         <label>ช่วงหน้า:</label>
@@ -360,7 +364,7 @@
                     </div>
                     <hr style="border:0; border-top:1px dashed var(--border); margin:10px 0;">
                     <div class="adv-card-title">
-                        <span>🔢 ข้ามหน้าไม่นับเลข (F12)</span>
+                        <span>🔢 ข้ามหน้าไม่นับเลข</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px;">
                         <input type="checkbox" id="skip-unprinted-count" onchange="if(isPreviewOpen) updatePreviewNumbers(); saveSettings();">
@@ -470,11 +474,11 @@
                 </div>
             </div>
 
-            <!-- 5. เครื่องมืองานสารบรรณขั้นสูง (กลุ่ม B) -->
+            <!-- 5. เครื่องมืองานสารบรรณขั้นสูง -->
             <div class="manual-section" style="border-left-color: #17a2b8;">
-                <h3>🏛️ 5. ขั้นตอนการใช้เครื่องมืองานสารบรรณ (กลุ่ม B)</h3>
+                <h3>🏛️ 5. ขั้นตอนการใช้เครื่องมืองานสารบรรณ</h3>
                 
-                <p><b>📥 5.1 การประทับเลขรับหนังสือ / ตรายางสารบรรณ (F7)</b></p>
+                <p><b>📥 5.1 การประทับเลขรับหนังสือ / ตรายางสารบรรณ</b></p>
                 <ol style="margin:0 0 10px 20px; padding:0;">
                     <li>ติ๊กถูกที่ <code>เปิดใช้งานตรายางรับหนังสือ</code></li>
                     <li>กรอก <b>สังกัด/กลุ่ม</b> (เช่น <i>ศธจ.อุดรธานี</i> หรือ <i>กลุ่มนโยบายและแผน</i>)</li>
@@ -483,25 +487,26 @@
                     <li>เลือกให้ประทับ <i>หน้าแรกเท่านั้น</i> และเลือกมุม <i>ขวาบน (TR)</i> หรือ <i>ซ้ายบน (TL)</i></li>
                 </ol>
 
-                <p><b>🛡️ 5.2 การประทับตราลายน้ำเอกสาร (Watermark - F8)</b></p>
+                <p><b>🛡️ 5.2 การประทับตราลายน้ำเอกสาร (Watermark)</b></p>
                 <ol style="margin:0 0 10px 20px; padding:0;">
                     <li>ติ๊กถูกที่ <code>เปิดประทับลายน้ำ</code></li>
                     <li>เลือกข้อความสำเร็จรูป เช่น <i>สำเนาถูกต้อง</i>, <i>เอกสารราชการลับ</i>, <i>ร่าง - ห้ามเผยแพร่</i> หรือพิมพ์ข้อความเอง</li>
                     <li>เลือกสี (แดง, เทา, น้ำเงิน) และมุมเอียง 45 องศา ระบบจะประทับกึ่งกลางทุกหน้าอย่างโปร่งแสง ไม่บดบังเนื้อหา</li>
                 </ol>
 
-                <p><b>📄 5.3 การแทรกหน้าว่าง A4 (Blank Page - F10)</b></p>
+                <p><b>📄 5.3 การแทรกหน้าว่าง A4 และหน้าคั่นข้อความ</b></p>
                 <ul style="margin:0 0 10px 20px; padding:0;">
-                    <li>กดปุ่ม <code>➕ แทรกหน้าว่าง A4</code> เพื่อสร้างหน้ากระดาษเปล่าสำหรับคั่นระหว่างบท หรือแทรกเพื่อพิมพ์เอกสารหน้า-หลัง</li>
+                    <li>กดปุ่ม <code>➕ แทรกหน้าว่าง A4</code> เพื่อสร้างหน้ากระดาษเปล่าสำหรับพิมพ์หน้า-หลัง</li>
+                    <li>หรือกรอกข้อความในช่อง (เช่น <i>เอกสารแนบ 1</i>) แล้วกดปุ่ม <code>➕ แทรกพร้อมข้อความ</code> ระบบจะสร้างหน้า A4 ที่มีข้อความขนาด 20 จัดกึ่งกลางหน้ากระดาษให้ทันที</li>
                 </ul>
 
-                <p><b>✂️ 5.4 การตัดแบ่ง / แยกช่วงหน้า (Split - F11)</b></p>
+                <p><b>✂️ 5.4 การตัดแบ่ง / แยกช่วงหน้า (Split)</b></p>
                 <ul style="margin:0 0 10px 20px; padding:0;">
                     <li>ในช่อง <code>ช่วงหน้า:</code> ให้พิมพ์หน้าที่ต้องการ เช่น <code>1-5, 8, 10-12</code></li>
                     <li>กดปุ่ม <code>💾 ดาวน์โหลดเฉพาะช่วงนี้</code> เพื่อสร้างไฟล์ PDF เฉพาะหน้าที่เลือกโดยไม่ต้องส่งออกทั้งเล่ม</li>
                 </ul>
 
-                <p><b>🔢 5.5 การข้ามหน้าซ่อนเลข ไม่ให้นับสะสม (F12)</b></p>
+                <p><b>🔢 5.5 การข้ามหน้าซ่อนเลข ไม่ให้นับสะสม</b></p>
                 <ul style="margin:0 0 6px 20px; padding:0;">
                     <li>ติ๊กที่ช่อง <code>หน้าที่ "ซ่อนเลข" ไม่ให้นับสะสม</code> เหมาะสำหรับกรณีที่มีหน้าปก 1 หน้า แล้วต้องการให้เนื้อหาหน้าถัดไปเริ่มนับเป็น <b>หน้า 1</b> ทันที</li>
                 </ul>
@@ -906,15 +911,71 @@
     }
 
     // -------------------------------------------------------------
-    // F10: Insert Blank Page
+    // Insert Blank Page (with optional centered text)
     // -------------------------------------------------------------
-    async function insertBlankPage() {
+    async function insertBlankPageWithText() {
+        const input = document.getElementById('blank-page-text');
+        const text = (input ? input.value : '').trim();
+        if (!text) {
+            showAlert('กรุณากรอกข้อความที่ต้องการแสดงกลางหน้ากระดาษก่อนค่ะ (เช่น เอกสารแนบ 1)');
+            if (input) input.focus();
+            return;
+        }
+        await insertBlankPage(text);
+    }
+
+    async function insertBlankPage(customText = '') {
         loading.style.display = 'flex';
-        document.getElementById('loading-status').innerText = 'กำลังสร้างหน้าว่าง...';
+        document.getElementById('loading-status').innerText = customText ? 'กำลังสร้างหน้าคั่นข้อความ...' : 'กำลังสร้างหน้าว่าง...';
         try {
             const { PDFDocument } = PDFLib;
             const blankDoc = await PDFDocument.create();
-            blankDoc.addPage([595.28, 841.89]); // A4 Size in points
+            const pageW = 595.28;
+            const pageH = 841.89;
+            const blankPage = blankDoc.addPage([pageW, pageH]); // A4 Size in points
+
+            if (customText) {
+                blankDoc.registerFontkit(fontkit);
+                const fontStyleFile = document.getElementById('font-style').value || 'THSARABUNNEW.TTF';
+                let fontRes = await fetch('fonts/' + fontStyleFile);
+                if (!fontRes.ok) fontRes = await fetch('fonts/THSARABUNNEW.TTF');
+                if (!fontRes.ok) throw new Error(`ไม่พบไฟล์ฟอนต์สำหรับสร้างข้อความ (Error ${fontRes.status})`);
+
+                const font = await blankDoc.embedFont(await fontRes.arrayBuffer(), { subset: true });
+                const fontSize = 20;
+                const maxWidth = pageW - 80;
+                const lineHeight = fontSize * 1.4;
+
+                const lines = [];
+                for (const rawLine of customText.split(/\r?\n/)) {
+                    if (font.widthOfTextAtSize(rawLine, fontSize) <= maxWidth) {
+                        lines.push(rawLine);
+                    } else {
+                        let current = '';
+                        for (const ch of rawLine) {
+                            const test = current + ch;
+                            if (font.widthOfTextAtSize(test, fontSize) > maxWidth && current) {
+                                lines.push(current);
+                                current = ch;
+                            } else {
+                                current = test;
+                            }
+                        }
+                        if (current) lines.push(current);
+                    }
+                }
+
+                const totalBlockHeight = lines.length * lineHeight;
+                const startY = (pageH + totalBlockHeight) / 2 - fontSize;
+                lines.forEach((line, idx) => {
+                    if (!line) return;
+                    const tw = font.widthOfTextAtSize(line, fontSize);
+                    const x = (pageW - tw) / 2;
+                    const y = startY - idx * lineHeight;
+                    blankPage.drawText(line, { x, y, size: fontSize, font });
+                });
+            }
+
             const blankBytes = await blankDoc.save();
 
             const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(blankBytes) }).promise;
@@ -924,7 +985,7 @@
 
             const badge = document.createElement('div');
             badge.className = 'page-badge-extra';
-            badge.innerText = 'หน้าว่าง';
+            badge.innerText = customText ? 'หน้าคั่น' : 'หน้าว่าง';
             card.appendChild(badge);
 
             const pos = insertPosSelect.value;
@@ -947,7 +1008,7 @@
     }
 
     // -------------------------------------------------------------
-    // F9: Convert Images to PDF and Insert
+    // Convert Images to PDF and Insert
     // -------------------------------------------------------------
     async function handleImageUpload(files) {
         if (!files || !files.length) return;
@@ -1016,7 +1077,7 @@
     }
 
     // -------------------------------------------------------------
-    // F11: Extract / Split Selected Page Range
+    // Extract / Split Selected Page Range
     // -------------------------------------------------------------
     async function extractPages() {
         if (!container.children.length) return showAlert('ยังไม่มีหน้าเอกสารในระบบค่ะ');
@@ -1165,7 +1226,7 @@
     }
 
     // -------------------------------------------------------------
-    // F12: Sequence calculation (with optional skip-unprinted)
+    // Sequence calculation (with optional skip-unprinted)
     // -------------------------------------------------------------
     function calculatePageNumbers(startNum) {
         const cards = Array.from(container.children);
@@ -1251,7 +1312,7 @@
     }
 
     // -------------------------------------------------------------
-    // Export Final PDF with Numbering + Stamp (F7) + Watermark (F8)
+    // Export Final PDF with Numbering + Stamp + Watermark
     // -------------------------------------------------------------
     document.getElementById('btn-export').onclick = async () => {
         if (!container.children.length) {
@@ -1297,7 +1358,7 @@
 
             const { numbers, total } = calculatePageNumbers(startNum);
 
-            // ข้อมูลสำหรับ F7 (ตรายางรับหนังสือ)
+            // ข้อมูลสำหรับตรายางรับหนังสือ
             const stampDept = document.getElementById('stamp-dept').value || 'ศธจ.อุดรธานี';
             const stampNo = document.getElementById('stamp-no').value || '';
             const stampDate = document.getElementById('stamp-date').value || '';
@@ -1305,7 +1366,7 @@
             const stampPageSetting = document.getElementById('stamp-page').value;
             const stampPosSetting = document.getElementById('stamp-pos').value;
 
-            // ข้อมูลสำหรับ F8 (ลายน้ำ)
+            // ข้อมูลสำหรับลายน้ำ
             const wmText = document.getElementById('wm-text').value.trim();
             const wmSize = parseInt(document.getElementById('wm-size').value) || 50;
             const wmAngleVal = parseInt(document.getElementById('wm-angle').value) || 45;
@@ -1335,7 +1396,7 @@
                 const vW = (totalRot === 90 || totalRot === 270) ? height : width;
                 const vH = (totalRot === 90 || totalRot === 270) ? width : height;
 
-                // 1) ประทับลายน้ำ (F8)
+                // 1) ประทับลายน้ำ
                 if (wmEnabled && wmText) {
                     const tw = fontBold.widthOfTextAtSize(wmText, wmSize);
                     const cx = width / 2;
@@ -1368,7 +1429,7 @@
                     page.drawText(text, { x: fx, y: fy, size: fSize, font, rotate: degrees(totalRot) });
                 }
 
-                // 3) ประทับตรายางรับหนังสือ (F7)
+                // 3) ประทับตรายางรับหนังสือ
                 const shouldStamp = stampEnabled && (stampPageSetting === 'all' || i === 0);
                 if (shouldStamp) {
                     const boxW = 160;
