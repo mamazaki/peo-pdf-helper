@@ -73,6 +73,12 @@
         
         .number-preview { position: absolute; color: #000000 !important; background: rgba(255, 255, 255, 0.92) !important; border: 1px dashed #000000 !important; padding: 2px 4px; font-size: 11px; pointer-events: none; display: none; z-index: 20; white-space: nowrap; line-height: 1.1; }
         #zoom-number-preview { background: transparent !important; border: 1px dashed rgba(0, 0, 0, 0.5) !important; padding: 0; }
+        .stamp-preview { position: absolute; display: none; pointer-events: none; z-index: 18; background: rgba(255, 255, 255, 0.92); border: 1px solid #1a40b3; color: #1a40b3; padding: 2px 4px; font-size: 5.5px; line-height: 1.25; border-radius: 2px; max-width: 78%; box-sizing: border-box; text-align: left; }
+        .stamp-preview .sp-dept { font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px; }
+        .stamp-preview .sp-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .watermark-preview { position: absolute; top: 50%; left: 50%; display: none; pointer-events: none; z-index: 15; font-weight: bold; white-space: nowrap; opacity: 0.25; text-align: center; user-select: none; }
+        .zoom-stage { position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #zoom-stamp-preview { border-width: 2px; padding: 6px 10px; font-size: 15px; line-height: 1.35; border-radius: 3px; }
         .page-info { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.72); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; z-index: 10; }
         .card-select-wrap { position: absolute; top: 4px; right: 4px; z-index: 15; background: rgba(255,255,255,0.92); border-radius: 4px; padding: 2px; display: flex; align-items: center; justify-content: center; border: 1px solid #ccc; cursor: pointer; }
         .card-select-cb { width: 15px; height: 15px; margin: 0; cursor: pointer; accent-color: var(--primary); }
@@ -288,7 +294,7 @@
                         </label>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
-                        <input type="checkbox" id="stamp-enable" onchange="saveSettings();">
+                        <input type="checkbox" id="stamp-enable" onchange="saveSettings(); updateAllOverlays();">
                         <label for="stamp-enable" style="margin:0; font-size:12px; cursor:pointer; color:var(--primary);">เปิดใช้งานตรายางรับหนังสือ</label>
                     </div>
                     <div class="form-row">
@@ -298,27 +304,27 @@
                     </div>
                     <div id="stamp-dept-custom-row" class="form-row" style="display:none;">
                         <label>ระบุสังกัด:</label>
-                        <input type="text" id="stamp-dept-custom" placeholder="พิมพ์ชื่อสังกัด/กลุ่ม..." style="height:28px;" onchange="saveSettings();">
+                        <input type="text" id="stamp-dept-custom" placeholder="พิมพ์ชื่อสังกัด/กลุ่ม..." style="height:28px;" oninput="updateAllOverlays();" onchange="saveSettings();">
                     </div>
                     <div class="form-row">
                         <label>เลขที่รับ:</label>
-                        <input type="text" id="stamp-no" placeholder="เช่น 123/2569" style="height:28px;" onchange="saveSettings();">
+                        <input type="text" id="stamp-no" placeholder="เช่น 123/2569" style="height:28px;" oninput="updateAllOverlays();" onchange="saveSettings();">
                     </div>
                     <div class="form-row">
                         <label>วันที่:</label>
-                        <input type="text" id="stamp-date" placeholder="เช่น 10 พ.ย. 2569" style="height:28px;" onchange="saveSettings();">
+                        <input type="text" id="stamp-date" placeholder="เช่น 10 พ.ย. 2569" style="height:28px;" oninput="updateAllOverlays();" onchange="saveSettings();">
                     </div>
                     <div class="form-row">
                         <label>เวลา:</label>
-                        <input type="text" id="stamp-time" placeholder="เช่น 09:30 น." style="height:28px;" onchange="saveSettings();">
+                        <input type="text" id="stamp-time" placeholder="เช่น 09:30 น." style="height:28px;" oninput="updateAllOverlays();" onchange="saveSettings();">
                     </div>
                     <div class="form-row">
                         <label>ประทับที่:</label>
-                        <select id="stamp-page" style="height:28px; width:110px;">
+                        <select id="stamp-page" style="height:28px; width:110px;" onchange="saveSettings(); updateAllOverlays();">
                             <option value="first">หน้าแรกเท่านั้น</option>
                             <option value="all">ทุกหน้า</option>
                         </select>
-                        <select id="stamp-pos" style="height:28px;">
+                        <select id="stamp-pos" style="height:28px;" onchange="saveSettings(); updateAllOverlays();">
                             <option value="TR">ขวาบน</option>
                             <option value="TL">ซ้ายบน</option>
                         </select>
@@ -331,16 +337,16 @@
                         <span>🛡️ ประทับลายน้ำเอกสาร</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
-                        <input type="checkbox" id="wm-enable" onchange="saveSettings();">
+                        <input type="checkbox" id="wm-enable" onchange="saveSettings(); updateAllOverlays();">
                         <label for="wm-enable" style="margin:0; font-size:12px; cursor:pointer; color:var(--primary);">เปิดประทับลายน้ำ (Watermark)</label>
                     </div>
                     <div class="form-row">
                         <label>ข้อความ:</label>
-                        <input type="text" id="wm-text" value="สำเนาถูกต้อง" style="height:28px;" onchange="saveSettings();">
+                        <input type="text" id="wm-text" value="สำเนาถูกต้อง" style="height:28px;" oninput="updateAllOverlays();" onchange="saveSettings();">
                     </div>
                     <div class="form-row">
                         <label>เทมเพลต:</label>
-                        <select style="height:28px;" onchange="document.getElementById('wm-text').value=this.value; saveSettings();">
+                        <select style="height:28px;" onchange="if(this.value){document.getElementById('wm-text').value=this.value; saveSettings(); updateAllOverlays();}">
                             <option value="">-- เลือกข้อความสำเร็จรูป --</option>
                             <option value="สำเนาถูกต้อง">สำเนาถูกต้อง</option>
                             <option value="เอกสารราชการลับ">เอกสารราชการลับ</option>
@@ -351,8 +357,8 @@
                     </div>
                     <div class="form-row">
                         <label>ขนาด / สี:</label>
-                        <input type="number" id="wm-size" value="50" min="20" max="100" style="height:28px; width:70px;" onchange="saveSettings();">
-                        <select id="wm-color" style="height:28px;">
+                        <input type="number" id="wm-size" value="50" min="20" max="100" style="height:28px; width:70px;" oninput="updateAllOverlays();" onchange="saveSettings();">
+                        <select id="wm-color" style="height:28px;" onchange="saveSettings(); updateAllOverlays();">
                             <option value="red">สีแดง (โปร่งแสง)</option>
                             <option value="gray">สีเทา (โปร่งแสง)</option>
                             <option value="blue">สีน้ำเงิน (โปร่งแสง)</option>
@@ -360,7 +366,7 @@
                     </div>
                     <div class="form-row">
                         <label>มุมเอียง:</label>
-                        <select id="wm-angle" style="height:28px;">
+                        <select id="wm-angle" style="height:28px;" onchange="saveSettings(); updateAllOverlays();">
                             <option value="45">เฉียง 45 องศา</option>
                             <option value="0">แนวนอน 0 องศา</option>
                             <option value="-45">เฉียง -45 องศา</option>
@@ -617,8 +623,12 @@
 <div id="zoom-modal" onclick="if(event.target === this) this.style.display='none'">
     <div id="zoom-content">
         <button class="close-modal" onclick="document.getElementById('zoom-modal').style.display='none'">X</button>
-        <canvas id="zoom-canvas"></canvas>
-        <div id="zoom-number-preview" class="number-preview"></div>
+        <div class="zoom-stage">
+            <canvas id="zoom-canvas"></canvas>
+            <div id="zoom-watermark-preview" class="watermark-preview"></div>
+            <div id="zoom-stamp-preview" class="stamp-preview"></div>
+            <div id="zoom-number-preview" class="number-preview"></div>
+        </div>
     </div>
 </div>
 
@@ -957,11 +967,13 @@
             }
         }
         saveSettings();
+        updateAllOverlays();
     }
 
     function toggleStampNumberType() {
         syncStampNumberUI(true);
         saveSettings();
+        updateAllOverlays();
     }
 
     function setDefaultStampValues() {
@@ -1164,6 +1176,12 @@
                 if (s.masterNum) {
                     textLabel.innerText = 'เปิดการรันเลข';
                     textLabel.style.color = 'var(--success)';
+                    isPreviewOpen = true;
+                    const pBtn = document.getElementById('btn-preview-toggle');
+                    if (pBtn) {
+                        pBtn.innerText = '❌ ปิดพรีวิว';
+                        pBtn.style.background = '#dc3545';
+                    }
                 } else {
                     textLabel.innerText = 'ปิดรันเลข (ต่อไฟล์เฉยๆ)';
                     textLabel.style.color = 'var(--danger)';
@@ -1396,6 +1414,7 @@
         lastSelectedCard = null;
         updateAllBadges();
         if (isPreviewOpen) updatePreviewNumbers();
+        updateAllOverlays();
     }
 
     const sortable = new Sortable(container, { 
@@ -1541,7 +1560,11 @@
             <label class="card-select-wrap" title="เลือกหน้านี้ (Ctrl+คลิก หรือ Shift+คลิก)">
                 <input type="checkbox" class="card-select-cb">
             </label>
-            <div class="canvas-wrapper"><div class="number-preview"></div></div>
+            <div class="canvas-wrapper">
+                <div class="watermark-preview"></div>
+                <div class="stamp-preview"></div>
+                <div class="number-preview"></div>
+            </div>
             <div class="file-source-tag" style="border-left-color: ${card._sourceColor};" title="${escapeHtml(tagLabel)}">${escapeHtml(tagLabel)}</div>
             <div class="controls">
                 <label class="toggle-print-label ${printLabelClass}">
@@ -1872,6 +1895,7 @@
         updateBatchBar();
         updateSectionRangeLabels();
         if(isPreviewOpen) updatePreviewNumbers();
+        updateAllOverlays();
     }
 
     document.getElementById('btn-preview-toggle').onclick = function() {
@@ -1884,10 +1908,17 @@
     function toggleMasterNumbering() {
         const isEnabled = document.getElementById('master-num-toggle').checked;
         const textLabel = document.getElementById('master-toggle-text');
+        const previewBtn = document.getElementById('btn-preview-toggle');
         
         if (isEnabled) {
             textLabel.innerText = 'เปิดการรันเลข';
             textLabel.style.color = 'var(--success)';
+            // Automatically show number preview so user sees feedback immediately
+            isPreviewOpen = true;
+            if (previewBtn) {
+                previewBtn.innerText = '❌ ปิดพรีวิว';
+                previewBtn.style.background = '#dc3545';
+            }
             Array.from(container.children).forEach(card => {
                 const togglePrint = card.querySelector('.toggle-print');
                 const lbl = card.querySelector('.toggle-print-label');
@@ -1912,7 +1943,7 @@
         }
 
         saveSettings();
-        if(isPreviewOpen) updatePreviewNumbers();
+        updatePreviewNumbers();
         saveHistory();
     }
 
@@ -2002,6 +2033,65 @@
         const numbers = finalPerPage.map(p => p.num);
         const total = Math.max(cards.length, 1);
         return { numbers, total, perPage: finalPerPage };
+    }
+
+    function applyStampOverlay(el, pageIndex, isZoom = false) {
+        if (!el) return;
+        const stampEnabled = document.getElementById('stamp-enable').checked;
+        const stampPageSetting = document.getElementById('stamp-page').value;
+        const shouldShow = stampEnabled && (stampPageSetting === 'all' || pageIndex === 0);
+        if (!shouldShow) {
+            el.style.display = 'none';
+            return;
+        }
+        const stampUseThai = !!(document.getElementById('stamp-thai-num') && document.getElementById('stamp-thai-num').checked);
+        const stampDept = formatStampDigits(getStampDeptValue(), stampUseThai);
+        const stampNo = formatStampDigits(document.getElementById('stamp-no').value || '........', stampUseThai);
+        const stampDate = formatStampDigits(document.getElementById('stamp-date').value || '........', stampUseThai);
+        const stampTime = formatStampDigits(document.getElementById('stamp-time').value || '........', stampUseThai);
+        const stampPos = document.getElementById('stamp-pos').value;
+        const margin = isZoom ? '36px' : '7px';
+
+        el.innerHTML = `
+            <div class="sp-dept">${escapeHtml(stampDept)}</div>
+            <div class="sp-line">เลขรับ: ${escapeHtml(stampNo)}</div>
+            <div class="sp-line">วันที่: ${escapeHtml(stampDate)}</div>
+            <div class="sp-line">เวลา: ${escapeHtml(stampTime)}</div>
+        `;
+        el.style.top = margin;
+        el.style.left = stampPos === 'TL' ? margin : 'auto';
+        el.style.right = stampPos === 'TR' ? margin : 'auto';
+        el.style.display = 'block';
+    }
+
+    function applyWatermarkOverlay(el, isZoom = false) {
+        if (!el) return;
+        const wmEnabled = document.getElementById('wm-enable').checked;
+        const wmText = (document.getElementById('wm-text').value || '').trim();
+        if (!wmEnabled || !wmText) {
+            el.style.display = 'none';
+            return;
+        }
+        const wmSize = parseInt(document.getElementById('wm-size').value) || 50;
+        const wmAngle = parseInt(document.getElementById('wm-angle').value) || 45;
+        const wmColorType = document.getElementById('wm-color').value;
+        let colorCss = 'rgb(217, 51, 51)';
+        if (wmColorType === 'gray') colorCss = 'rgb(128, 128, 128)';
+        else if (wmColorType === 'blue') colorCss = 'rgb(26, 77, 204)';
+
+        el.innerText = wmText;
+        el.style.color = colorCss;
+        el.style.fontSize = (isZoom ? Math.round(wmSize * 1.35) : Math.max(8, Math.round(wmSize * 0.28))) + 'px';
+        // PDF-lib positive angle rotates counter-clockwise; CSS positive angle rotates clockwise
+        el.style.transform = `translate(-50%, -50%) rotate(${-wmAngle}deg)`;
+        el.style.display = 'block';
+    }
+
+    function updateAllOverlays() {
+        Array.from(container.children).forEach((card, i) => {
+            applyStampOverlay(card.querySelector('.stamp-preview'), i, false);
+            applyWatermarkOverlay(card.querySelector('.watermark-preview'), false);
+        });
     }
 
     function updatePreviewNumbers() {
@@ -2324,6 +2414,10 @@
             const zoomPreview = document.getElementById('zoom-number-preview');
             const isMasterEnabled = document.getElementById('master-num-toggle').checked;
             const isPrint = card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked;
+            const pageIndex = Array.from(container.children).indexOf(card);
+
+            applyWatermarkOverlay(document.getElementById('zoom-watermark-preview'), true);
+            applyStampOverlay(document.getElementById('zoom-stamp-preview'), pageIndex, true);
             
             if (!isPreviewOpen || !isPrint || !isMasterEnabled) {
                 zoomPreview.style.display = 'none';
@@ -2338,7 +2432,6 @@
                 const paddingEdge = 60; 
                 
                 const startNum = Math.max(1, parseInt(document.getElementById('start-num').value) || 1); 
-                const pageIndex = Array.from(container.children).indexOf(card);
                 const { perPage } = calculatePageNumbers(startNum);
                 const cfg = perPage[pageIndex];
                 
