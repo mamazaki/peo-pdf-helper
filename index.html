@@ -286,7 +286,23 @@
                     </div>
                     <div class="form-row">
                         <label>สังกัด/กลุ่ม:</label>
-                        <input type="text" id="stamp-dept" value="ศธจ.อุดรธานี" style="height:28px;" onchange="saveSettings();">
+                        <select id="stamp-dept-select" style="height:28px;" onchange="onStampDeptChange()">
+                            <option value="สำนักงานศึกษาธิการจังหวัดอุดรธานี">สำนักงานศึกษาธิการจังหวัดอุดรธานี</option>
+                            <option value="กลุ่มอำนวยการ">กลุ่มอำนวยการ</option>
+                            <option value="กลุ่มบริหารงานบุคคล">กลุ่มบริหารงานบุคคล</option>
+                            <option value="กลุ่มนโยบายและแผน">กลุ่มนโยบายและแผน</option>
+                            <option value="กลุ่มพัฒนาการศึกษา">กลุ่มพัฒนาการศึกษา</option>
+                            <option value="กลุ่มนิเทศ ติดตาม และประเมินผล">กลุ่มนิเทศ ติดตาม และประเมินผล</option>
+                            <option value="กลุ่มส่งเสริมการศึกษาเอกชน">กลุ่มส่งเสริมการศึกษาเอกชน</option>
+                            <option value="กลุ่มลูกเสือ ยุวกาชาด และกิจการนักเรียน">กลุ่มลูกเสือ ยุวกาชาด และกิจการนักเรียน</option>
+                            <option value="หน่วยตรวจสอบภายใน">หน่วยตรวจสอบภายใน</option>
+                            <option value="คุรุสภา">คุรุสภา</option>
+                            <option value="__other__">อื่น ๆ (ระบุเอง)</option>
+                        </select>
+                    </div>
+                    <div id="stamp-dept-custom-row" class="form-row" style="display:none;">
+                        <label>ระบุสังกัด:</label>
+                        <input type="text" id="stamp-dept-custom" placeholder="พิมพ์ชื่อสังกัด/กลุ่ม..." style="height:28px;" onchange="saveSettings();">
                     </div>
                     <div class="form-row">
                         <label>เลขที่รับ:</label>
@@ -698,11 +714,35 @@
         }
 
         if (convertValues) {
-            ['stamp-dept', 'stamp-no', 'stamp-date', 'stamp-time'].forEach(id => {
+            ['stamp-dept-custom', 'stamp-no', 'stamp-date', 'stamp-time'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el && el.value) el.value = formatStampDigits(el.value, useThai);
             });
         }
+    }
+
+    function getStampDeptValue() {
+        const sel = document.getElementById('stamp-dept-select');
+        if (!sel) return 'สำนักงานศึกษาธิการจังหวัดอุดรธานี';
+        if (sel.value === '__other__') {
+            const custom = document.getElementById('stamp-dept-custom');
+            return (custom && custom.value.trim()) ? custom.value.trim() : 'สำนักงานศึกษาธิการจังหวัดอุดรธานี';
+        }
+        return sel.value;
+    }
+
+    function onStampDeptChange() {
+        const sel = document.getElementById('stamp-dept-select');
+        const customRow = document.getElementById('stamp-dept-custom-row');
+        if (sel && customRow) {
+            const isOther = sel.value === '__other__';
+            customRow.style.display = isOther ? 'flex' : 'none';
+            if (isOther) {
+                const inp = document.getElementById('stamp-dept-custom');
+                if (inp && !inp.value) inp.focus();
+            }
+        }
+        saveSettings();
     }
 
     function toggleStampNumberType() {
@@ -874,7 +914,8 @@
                 masterNum: document.getElementById('master-num-toggle').checked,
                 stampEnable: document.getElementById('stamp-enable').checked,
                 stampThaiNum: document.getElementById('stamp-thai-num').checked,
-                stampDept: document.getElementById('stamp-dept').value,
+                stampDeptSelect: document.getElementById('stamp-dept-select').value,
+                stampDeptCustom: document.getElementById('stamp-dept-custom').value,
                 stampNo: document.getElementById('stamp-no').value,
                 stampPage: document.getElementById('stamp-page').value,
                 stampPos: document.getElementById('stamp-pos').value,
@@ -916,7 +957,15 @@
             }
             if (s.stampEnable !== undefined) document.getElementById('stamp-enable').checked = s.stampEnable;
             if (s.stampThaiNum !== undefined) document.getElementById('stamp-thai-num').checked = s.stampThaiNum;
-            if (s.stampDept) document.getElementById('stamp-dept').value = s.stampDept;
+            if (s.stampDeptSelect) {
+                const sel = document.getElementById('stamp-dept-select');
+                if (Array.from(sel.options).some(opt => opt.value === s.stampDeptSelect)) {
+                    sel.value = s.stampDeptSelect;
+                }
+            }
+            if (s.stampDeptCustom) document.getElementById('stamp-dept-custom').value = s.stampDeptCustom;
+            document.getElementById('stamp-dept-custom-row').style.display =
+                document.getElementById('stamp-dept-select').value === '__other__' ? 'flex' : 'none';
             if (s.stampNo) document.getElementById('stamp-no').value = s.stampNo;
             if (s.stampPage) document.getElementById('stamp-page').value = s.stampPage;
             if (s.stampPos) document.getElementById('stamp-pos').value = s.stampPos;
@@ -1851,7 +1900,7 @@
             const { perPage } = calculatePageNumbers(startNum);
 
             const stampUseThai = !!(document.getElementById('stamp-thai-num') && document.getElementById('stamp-thai-num').checked);
-            const stampDept = formatStampDigits(document.getElementById('stamp-dept').value || 'ศธจ.อุดรธานี', stampUseThai);
+            const stampDept = formatStampDigits(getStampDeptValue(), stampUseThai);
             const stampNo = formatStampDigits(document.getElementById('stamp-no').value || '', stampUseThai);
             const stampDate = formatStampDigits(document.getElementById('stamp-date').value || '', stampUseThai);
             const stampTime = formatStampDigits(document.getElementById('stamp-time').value || '', stampUseThai);
@@ -1927,7 +1976,13 @@
                 // 3) ประทับตรายางรับหนังสือ
                 const shouldStamp = stampEnabled && (stampPageSetting === 'all' || i === 0);
                 if (shouldStamp) {
-                    const boxW = 160;
+                    const maxLineTw = Math.max(
+                        fontBold.widthOfTextAtSize(stampDept, 12),
+                        font.widthOfTextAtSize(`เลขรับ: ${stampNo || '........................'}`, 11),
+                        font.widthOfTextAtSize(`วันที่: ${stampDate || '........................'}`, 11),
+                        font.widthOfTextAtSize(`เวลา: ${stampTime || '........................'}`, 11)
+                    );
+                    const boxW = Math.max(165, Math.min(vW - 50, maxLineTw + 24));
                     const boxH = 75;
                     const marginEdge = 25;
                     let bx = (stampPosSetting === 'TR') ? (vW - boxW - marginEdge) : marginEdge;
