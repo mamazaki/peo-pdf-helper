@@ -273,8 +273,12 @@
             <div class="adv-grid">
                 <!-- ประทับเลขรับ / ตรายางสารบรรณ -->
                 <div class="adv-card">
-                    <div class="adv-card-title">
+                    <div class="adv-card-title" style="justify-content:space-between;">
                         <span>📥 ประทับเลขรับ / ตรายางสารบรรณ</span>
+                        <label style="display:inline-flex; align-items:center; gap:4px; margin:0; font-size:11px; font-weight:600; cursor:pointer; background:var(--card-bg); border:1px solid var(--border); padding:2px 8px; border-radius:999px; text-transform:none;" title="สลับรูปแบบตัวเลขระหว่างอารบิกและเลขไทย">
+                            <input type="checkbox" id="stamp-thai-num" onchange="toggleStampNumberType()" style="width:13px; height:13px; margin:0; cursor:pointer;">
+                            <span id="stamp-num-label">อารบิก</span>
+                        </label>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
                         <input type="checkbox" id="stamp-enable" onchange="saveSettings();">
@@ -286,15 +290,15 @@
                     </div>
                     <div class="form-row">
                         <label>เลขที่รับ:</label>
-                        <input type="text" id="stamp-no" placeholder="เช่น ๑๒๓/๒๕๖๙" style="height:28px;" onchange="saveSettings();">
+                        <input type="text" id="stamp-no" placeholder="เช่น 123/2569" style="height:28px;" onchange="saveSettings();">
                     </div>
                     <div class="form-row">
                         <label>วันที่:</label>
-                        <input type="text" id="stamp-date" placeholder="เช่น ๙ พ.ย. ๒๕๖๙" style="height:28px;" onchange="saveSettings();">
+                        <input type="text" id="stamp-date" placeholder="เช่น 10 พ.ย. 2569" style="height:28px;" onchange="saveSettings();">
                     </div>
                     <div class="form-row">
                         <label>เวลา:</label>
-                        <input type="text" id="stamp-time" placeholder="เช่น ๐๙:๓๐ น." style="height:28px;" onchange="saveSettings();">
+                        <input type="text" id="stamp-time" placeholder="เช่น 09:30 น." style="height:28px;" onchange="saveSettings();">
                     </div>
                     <div class="form-row">
                         <label>ประทับที่:</label>
@@ -520,7 +524,7 @@
                 
                 <p><b>📥 5.1 การประทับเลขรับหนังสือ / ตรายางสารบรรณ</b></p>
                 <ol style="margin:0 0 10px 20px; padding:0;">
-                    <li>ติ๊กถูกที่ <code>เปิดใช้งานตรายางรับหนังสือ</code> และกรอก <b>สังกัด/กลุ่ม</b>, <b>เลขที่รับ</b>, <b>วันที่</b>, <b>เวลา</b></li>
+                    <li>ติ๊กถูกที่ <code>เปิดใช้งานตรายางรับหนังสือ</code> และกรอก <b>สังกัด/กลุ่ม</b>, <b>เลขที่รับ</b>, <b>วันที่</b>, <b>เวลา</b> (ค่าเริ่มต้นเป็นเลขอารบิก และกดสลับเป็น <b>เลขไทย / อารบิก</b> ได้ที่มุมขวาบนของการ์ด)</li>
                     <li>เลือกประทับ <i>หน้าแรกเท่านั้น</i> หรือ <i>ทุกหน้า</i> และเลือกมุม <i>ขวาบน</i> หรือ <i>ซ้ายบน</i></li>
                 </ol>
 
@@ -662,24 +666,64 @@
         }
     }
 
+    function toThaiNum(str) {
+        return String(str).replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
+    }
+
+    function toArabicNum(str) {
+        return String(str).replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d));
+    }
+
+    function formatStampDigits(str, useThai = null) {
+        if (useThai === null) {
+            const cb = document.getElementById('stamp-thai-num');
+            useThai = !!(cb && cb.checked);
+        }
+        return useThai ? toThaiNum(toArabicNum(str)) : toArabicNum(str);
+    }
+
+    function syncStampNumberUI(convertValues = false) {
+        const useThai = !!(document.getElementById('stamp-thai-num') && document.getElementById('stamp-thai-num').checked);
+        const lbl = document.getElementById('stamp-num-label');
+        if (lbl) lbl.innerText = useThai ? 'เลขไทย' : 'อารบิก';
+
+        const phMap = {
+            'stamp-no': useThai ? 'เช่น ๑๒๓/๒๕๖๙' : 'เช่น 123/2569',
+            'stamp-date': useThai ? 'เช่น ๑๐ พ.ย. ๒๕๖๙' : 'เช่น 10 พ.ย. 2569',
+            'stamp-time': useThai ? 'เช่น ๐๙:๓๐ น.' : 'เช่น 09:30 น.'
+        };
+        for (const [id, ph] of Object.entries(phMap)) {
+            const el = document.getElementById(id);
+            if (el) el.placeholder = ph;
+        }
+
+        if (convertValues) {
+            ['stamp-dept', 'stamp-no', 'stamp-date', 'stamp-time'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el && el.value) el.value = formatStampDigits(el.value, useThai);
+            });
+        }
+    }
+
+    function toggleStampNumberType() {
+        syncStampNumberUI(true);
+        saveSettings();
+    }
+
     function setDefaultStampValues() {
         const d = new Date();
         const thYear = d.getFullYear() + 543;
         const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
-        const dayStr = toThaiNum(d.getDate());
-        const yearStr = toThaiNum(thYear);
-        const timeStr = toThaiNum(String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0')) + ' น.';
+        const useThai = !!(document.getElementById('stamp-thai-num') && document.getElementById('stamp-thai-num').checked);
+        const rawDate = `${d.getDate()} ${months[d.getMonth()]} ${thYear}`;
+        const rawTime = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} น.`;
         
         if (!document.getElementById('stamp-date').value) {
-            document.getElementById('stamp-date').value = `${dayStr} ${months[d.getMonth()]} ${yearStr}`;
+            document.getElementById('stamp-date').value = formatStampDigits(rawDate, useThai);
         }
         if (!document.getElementById('stamp-time').value) {
-            document.getElementById('stamp-time').value = timeStr;
+            document.getElementById('stamp-time').value = formatStampDigits(rawTime, useThai);
         }
-    }
-
-    function toThaiNum(str) {
-        return String(str).replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
     }
 
     function escapeHtml(text) {
@@ -829,6 +873,7 @@
                 offsetY: document.getElementById('offset-y').value,
                 masterNum: document.getElementById('master-num-toggle').checked,
                 stampEnable: document.getElementById('stamp-enable').checked,
+                stampThaiNum: document.getElementById('stamp-thai-num').checked,
                 stampDept: document.getElementById('stamp-dept').value,
                 stampNo: document.getElementById('stamp-no').value,
                 stampPage: document.getElementById('stamp-page').value,
@@ -870,6 +915,7 @@
                 }
             }
             if (s.stampEnable !== undefined) document.getElementById('stamp-enable').checked = s.stampEnable;
+            if (s.stampThaiNum !== undefined) document.getElementById('stamp-thai-num').checked = s.stampThaiNum;
             if (s.stampDept) document.getElementById('stamp-dept').value = s.stampDept;
             if (s.stampNo) document.getElementById('stamp-no').value = s.stampNo;
             if (s.stampPage) document.getElementById('stamp-page').value = s.stampPage;
@@ -898,8 +944,9 @@
             document.documentElement.setAttribute('data-theme', 'dark');
             document.getElementById('theme-btn').innerText = '☀️ Light Mode';
         }
-        setDefaultStampValues();
         loadSettings();
+        syncStampNumberUI(false);
+        setDefaultStampValues();
 
         // Register Offline Service Worker (PWA)
         if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.protocol === 'http:')) {
@@ -1803,10 +1850,11 @@
 
             const { perPage } = calculatePageNumbers(startNum);
 
-            const stampDept = document.getElementById('stamp-dept').value || 'ศธจ.อุดรธานี';
-            const stampNo = document.getElementById('stamp-no').value || '';
-            const stampDate = document.getElementById('stamp-date').value || '';
-            const stampTime = document.getElementById('stamp-time').value || '';
+            const stampUseThai = !!(document.getElementById('stamp-thai-num') && document.getElementById('stamp-thai-num').checked);
+            const stampDept = formatStampDigits(document.getElementById('stamp-dept').value || 'ศธจ.อุดรธานี', stampUseThai);
+            const stampNo = formatStampDigits(document.getElementById('stamp-no').value || '', stampUseThai);
+            const stampDate = formatStampDigits(document.getElementById('stamp-date').value || '', stampUseThai);
+            const stampTime = formatStampDigits(document.getElementById('stamp-time').value || '', stampUseThai);
             const stampPageSetting = document.getElementById('stamp-page').value;
             const stampPosSetting = document.getElementById('stamp-pos').value;
 
