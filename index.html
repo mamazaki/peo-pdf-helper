@@ -190,13 +190,16 @@
             </div>
         </div>
 
-        <div class="input-group" style="width: 80px;">
+        <div id="toolbar-start-num-group" class="input-group" style="width: 80px; transition: opacity 0.2s;">
             <label>เริ่มที่หน้า:</label>
             <input type="number" id="start-num" value="1" min="1" oninput="updateFormatOptions(); if(isPreviewOpen) updatePreviewNumbers();">
         </div>
 
-        <div class="input-group" style="border-left: 1px solid var(--border); padding-left: 10px;">
-            <label>รูปแบบตัวเลข:</label>
+        <div id="toolbar-num-format-group" class="input-group" style="border-left: 1px solid var(--border); padding-left: 10px; transition: opacity 0.2s;">
+            <label style="display:flex; align-items:center; gap:6px;">
+                <span>รูปแบบตัวเลข:</span>
+                <span id="section-override-badge" style="display:none; font-size:9.5px; color:#856404; background:#fff3cd; border:1px solid #ffeeba; padding:1px 5px; border-radius:4px; text-transform:none;">🔒 ใช้แบบแบ่งช่วงด้านล่าง</span>
+            </label>
             <div style="display:flex; gap:4px;">
                 <select id="num-type" style="width: 85px;" onchange="updateFormatOptions(); saveSettings();">
                     <option value="arabic">อารบิก</option>
@@ -404,12 +407,13 @@
                     <div class="adv-card-title">
                         <span>📑 แบ่งชุดเลขหน้าหลายช่วงในไฟล์เดียว</span>
                     </div>
-                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
                         <input type="checkbox" id="section-num-enable" onchange="toggleSectionNumbering()">
-                        <label for="section-num-enable" style="margin:0; font-size:12px; cursor:pointer; color:var(--primary);">เปิดใช้เลขหน้าแยกตามช่วง</label>
+                        <label for="section-num-enable" style="margin:0; font-size:12px; cursor:pointer; color:var(--primary);">เปิดใช้เลขหน้าแยกตามช่วง (แทนที่แถบด้านบน)</label>
                     </div>
+                    <p id="section-num-hint" style="font-size:11px; color:#666; margin:0 0 8px 0; display:none;">ระบบเปิดการรันเลขให้อัตโนมัติแล้ว โดยยังคงใช้ฟอนต์ ขนาด และตำแหน่งจากแถบด้านบนค่ะ</p>
                     <div id="section-rules-list"></div>
-                    <button type="button" class="btn btn-secondary" style="height:26px; font-size:11.5px; margin-top:4px;" onclick="addSectionRule()">➕ เพิ่มช่วงเลขหน้า</button>
+                    <button type="button" class="btn btn-secondary" style="height:26px; font-size:11.5px; margin-top:4px;" onclick="addSectionRule(); onSectionRuleChange();">➕ เพิ่มช่วงเลขหน้า</button>
                 </div>
             </div>
         </div>
@@ -698,13 +702,24 @@
         return rules;
     }
 
-    function addSectionRule(rule = { startPage: 1, type: 'thai', format: '{n}', startNum: 1 }) {
+    function addSectionRule(rule = null) {
         const list = document.getElementById('section-rules-list');
+        if (!rule) {
+            const existing = getSectionRulesFromUI();
+            const maxStart = existing.length ? Math.max(...existing.map(r => r.startPage)) : 0;
+            rule = {
+                startPage: maxStart ? maxStart + 3 : 1,
+                type: 'thai',
+                format: '{n}',
+                startNum: 1
+            };
+        }
         const row = document.createElement('div');
         row.className = 'section-rule-row';
         row.innerHTML = `
-            <span style="font-size:10.5px;">หน้า</span>
-            <input type="number" class="sec-start-page" min="1" value="${rule.startPage || 1}" style="width:46px;" title="เริ่มตั้งแต่ลำดับหน้าที่" onchange="onSectionRuleChange()">
+            <span style="font-size:10.5px;">ตั้งแต่ลำดับที่</span>
+            <input type="number" class="sec-start-page" min="1" value="${rule.startPage || 1}" style="width:46px;" title="เริ่มตั้งแต่ลำดับหน้าที่" oninput="onSectionRuleChange()">
+            <span class="sec-range-badge" style="font-size:10px; color:var(--primary); font-weight:bold; min-width:55px;"></span>
             <select class="sec-type" style="width:74px;" onchange="onSectionRuleChange()">
                 <option value="thai" ${rule.type === 'thai' ? 'selected' : ''}>เลขไทย</option>
                 <option value="arabic" ${rule.type === 'arabic' ? 'selected' : ''}>อารบิก</option>
@@ -717,14 +732,71 @@
                 <option value="หน้า {n} / {total}" ${rule.format === 'หน้า {n} / {total}' ? 'selected' : ''}>หน้า {n}/{total}</option>
                 <option value="({n})" ${rule.format === '({n})' ? 'selected' : ''}>({n})</option>
             </select>
-            <span style="font-size:10.5px;">นับ</span>
-            <input type="number" class="sec-start-num" min="1" value="${rule.startNum || 1}" style="width:44px;" title="เริ่มนับเลขที่" onchange="onSectionRuleChange()">
+            <span style="font-size:10.5px;">เริ่มนับ</span>
+            <input type="number" class="sec-start-num" min="1" value="${rule.startNum || 1}" style="width:44px;" title="เริ่มนับเลขที่" oninput="onSectionRuleChange()">
             <button type="button" class="btn btn-danger" style="height:24px; padding:0 6px; font-size:11px;" onclick="this.closest('.section-rule-row').remove(); onSectionRuleChange();" title="ลบช่วงนี้">✖</button>
         `;
         list.appendChild(row);
     }
 
+    function updateSectionRangeLabels() {
+        const rows = Array.from(document.querySelectorAll('#section-rules-list .section-rule-row'));
+        if (!rows.length) return;
+        const totalCards = container.children.length;
+        const items = rows.map(row => ({
+            row,
+            startPage: Math.max(1, parseInt(row.querySelector('.sec-start-page').value) || 1)
+        }));
+        const sorted = [...items].sort((a, b) => a.startPage - b.startPage);
+
+        items.forEach(item => {
+            const badge = item.row.querySelector('.sec-range-badge');
+            if (!badge) return;
+            const idx = sorted.indexOf(item);
+            const next = sorted[idx + 1];
+            const from = item.startPage;
+
+            if (next && next.startPage === from) {
+                badge.style.color = 'var(--danger)';
+                badge.innerText = '(ซ้ำกัน)';
+                return;
+            }
+            badge.style.color = 'var(--primary)';
+            if (totalCards > 0) {
+                if (from > totalCards) {
+                    badge.style.color = 'var(--danger)';
+                    badge.innerText = `(เกิน ${totalCards} หน้า)`;
+                } else {
+                    const to = next ? Math.min(next.startPage - 1, totalCards) : totalCards;
+                    badge.innerText = from === to ? `(หน้า ${from})` : `(หน้า ${from}–${to})`;
+                }
+            } else {
+                const to = next ? next.startPage - 1 : null;
+                badge.innerText = to ? `(หน้า ${from}–${to})` : `(หน้า ${from}+)`;
+            }
+        });
+    }
+
+    function syncSectionNumberingUI() {
+        const enabled = document.getElementById('section-num-enable').checked;
+        const startGroup = document.getElementById('toolbar-start-num-group');
+        const fmtGroup = document.getElementById('toolbar-num-format-group');
+        const overrideBadge = document.getElementById('section-override-badge');
+        const hint = document.getElementById('section-num-hint');
+
+        ['start-num', 'num-type', 'num-format'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = enabled;
+        });
+        if (startGroup) startGroup.style.opacity = enabled ? '0.45' : '1';
+        if (fmtGroup) fmtGroup.style.opacity = enabled ? '0.45' : '1';
+        if (overrideBadge) overrideBadge.style.display = enabled ? 'inline-block' : 'none';
+        if (hint) hint.style.display = enabled ? 'block' : 'none';
+        updateSectionRangeLabels();
+    }
+
     function onSectionRuleChange() {
+        syncSectionNumberingUI();
         saveSettings();
         if (isPreviewOpen) updatePreviewNumbers();
     }
@@ -735,6 +807,12 @@
         if (enabled && list.children.length === 0) {
             addSectionRule({ startPage: 1, type: 'thai-alpha', format: '{n}', startNum: 1 });
             addSectionRule({ startPage: 4, type: 'thai', format: '{n}', startNum: 1 });
+        }
+        // Auto-enable master numbering switch when user enables section numbering
+        const masterToggle = document.getElementById('master-num-toggle');
+        if (enabled && masterToggle && !masterToggle.checked) {
+            masterToggle.checked = true;
+            toggleMasterNumbering();
         }
         onSectionRuleChange();
     }
@@ -811,6 +889,7 @@
 
             updateFormatOptions();
             if (s.numFormat) document.getElementById('num-format').value = s.numFormat;
+            syncSectionNumberingUI();
         } catch (e) {}
     }
 
@@ -1480,6 +1559,7 @@
         }
         updateFormatOptions();
         updateBatchBar();
+        updateSectionRangeLabels();
         if(isPreviewOpen) updatePreviewNumbers();
     }
 
