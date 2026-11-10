@@ -109,14 +109,14 @@
         body.drag-over { outline: 5px dashed var(--primary); outline-offset: -10px; background: rgba(0, 86, 179, 0.1); }
         
         /* Accordion / Tool Panel */
-        .advanced-bar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
-        .adv-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
-        .adv-title { font-size: 13.5px; font-weight: bold; color: var(--primary); display: flex; align-items: center; gap: 8px; }
-        .adv-content { display: block; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
-        .adv-content.collapsed { display: none; }
-        .adv-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
-        .adv-card { background: var(--bg); padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border); }
-        .adv-card-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; color: var(--primary); display: flex; align-items: center; gap: 6px; }
+        .doc-tools-bar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        .doc-tools-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+        .doc-tools-title { font-size: 13.5px; font-weight: bold; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        .doc-tools-content { display: block; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
+        .doc-tools-content.collapsed { display: none; }
+        .doc-tools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+        .doc-tools-card { background: var(--bg); padding: 10px 12px; border-radius: 6px; border: 1px solid var(--border); }
+        .doc-tools-card-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; color: var(--primary); display: flex; align-items: center; gap: 6px; }
         .form-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
         .form-row label { min-width: 65px; margin: 0; font-size: 11px; text-transform: none; }
         .section-rule-row { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; background: var(--card-bg); padding: 5px; border-radius: 5px; border: 1px solid var(--border); }
@@ -267,20 +267,20 @@
     </div>
 
     <!-- Official Document Tools Panel -->
-    <div class="advanced-bar">
-        <div class="adv-header" onclick="toggleAdvancedPanel()">
-            <div class="adv-title">
+    <div class="doc-tools-bar">
+        <div class="doc-tools-header" onclick="toggleDocToolsPanel()">
+            <div class="doc-tools-title">
                 <span>🏛️ เครื่องมืองานสารบรรณและลูกเล่นเพิ่มเติม</span>
-                <span id="adv-badge" style="font-size:11px; background:#e3f2fd; color:#0056b3; padding:2px 8px; border-radius:12px; font-weight:normal;">คลิกเพื่อย่อ/ขยาย</span>
+                <span id="doc-tools-badge" style="font-size:11px; background:#e3f2fd; color:#0056b3; padding:2px 8px; border-radius:12px; font-weight:normal;">คลิกเพื่อย่อ/ขยาย</span>
             </div>
-            <div id="adv-arrow" style="font-size: 14px; color: var(--primary);">▲</div>
+            <div id="doc-tools-arrow" style="font-size: 14px; color: var(--primary);">▲</div>
         </div>
 
-        <div id="adv-content" class="adv-content">
-            <div class="adv-grid">
+        <div id="doc-tools-content" class="doc-tools-content">
+            <div class="doc-tools-grid">
                 <!-- ประทับเลขรับ / ตรายางสารบรรณ -->
-                <div class="adv-card">
-                    <div class="adv-card-title" style="justify-content:space-between;">
+                <div class="doc-tools-card">
+                    <div class="doc-tools-card-title" style="justify-content:space-between;">
                         <span>📥 ประทับเลขรับ / ตรายางสารบรรณ</span>
                         <label style="display:inline-flex; align-items:center; gap:4px; margin:0; font-size:11px; font-weight:600; cursor:pointer; background:var(--card-bg); border:1px solid var(--border); padding:2px 8px; border-radius:999px; text-transform:none;" title="สลับรูปแบบตัวเลขระหว่างอารบิกและเลขไทย">
                             <input type="checkbox" id="stamp-thai-num" onchange="toggleStampNumberType()" style="width:13px; height:13px; margin:0; cursor:pointer;">
@@ -326,8 +326,8 @@
                 </div>
 
                 <!-- ลายน้ำ Watermark -->
-                <div class="adv-card">
-                    <div class="adv-card-title">
+                <div class="doc-tools-card">
+                    <div class="doc-tools-card-title">
                         <span>🛡️ ประทับลายน้ำเอกสาร</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
@@ -369,8 +369,8 @@
                 </div>
 
                 <!-- แทรกหน้าว่าง + แทรกรูป -->
-                <div class="adv-card">
-                    <div class="adv-card-title">
+                <div class="doc-tools-card">
+                    <div class="doc-tools-card-title">
                         <span>📄 แทรกหน้าว่าง / หน้าคั่น</span>
                     </div>
                     <p style="font-size:11.5px; color:#666; margin:0 0 8px 0;">เหมาะสำหรับเอกสารพิมพ์หน้า-หลัง หรือแทรกใบปะหน้าคั่นระหว่างเล่ม</p>
@@ -382,7 +382,7 @@
                         <button type="button" class="btn btn-primary" style="height:30px; font-size:12px; white-space:nowrap;" onclick="insertBlankPageWithText()">➕ แทรกพร้อมข้อความ</button>
                     </div>
                     <hr style="border:0; border-top:1px dashed var(--border); margin:10px 0;">
-                    <div class="adv-card-title">
+                    <div class="doc-tools-card-title">
                         <span>🖼️ แปลงรูปภาพเป็น PDF</span>
                     </div>
                     <p style="font-size:11.5px; color:#666; margin:0 0 8px 0;">รองรับไฟล์ JPG / PNG แทรกเข้าชุดเอกสารและรันเลขหน้าได้ทันที</p>
@@ -393,8 +393,8 @@
                 </div>
 
                 <!-- แยกไฟล์ Split + ข้ามหน้า + ล้าง Metadata -->
-                <div class="adv-card">
-                    <div class="adv-card-title">
+                <div class="doc-tools-card">
+                    <div class="doc-tools-card-title">
                         <span>✂️ แยกช่วงหน้า / ตัดแบ่งไฟล์</span>
                     </div>
                     <div class="form-row">
@@ -405,7 +405,7 @@
                         <button type="button" class="btn btn-secondary" style="height:28px; font-size:11.5px;" onclick="extractPages()">💾 ดาวน์โหลดเฉพาะช่วงนี้</button>
                     </div>
                     <hr style="border:0; border-top:1px dashed var(--border); margin:10px 0;">
-                    <div class="adv-card-title">
+                    <div class="doc-tools-card-title">
                         <span>🔢 ตั้งค่าเลขหน้าและความปลอดภัย</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
@@ -419,8 +419,8 @@
                 </div>
 
                 <!-- แบ่งชุดเลขหน้าหลายช่วงในไฟล์เดียว -->
-                <div class="adv-card">
-                    <div class="adv-card-title">
+                <div class="doc-tools-card">
+                    <div class="doc-tools-card-title">
                         <span>📑 แบ่งชุดเลขหน้าหลายช่วงในไฟล์เดียว</span>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
@@ -835,10 +835,10 @@
         closeSettingsModal();
     }
 
-    function toggleAdvancedPanel() {
-        const content = document.getElementById('adv-content');
-        const arrow = document.getElementById('adv-arrow');
-        const badge = document.getElementById('adv-badge');
+    function toggleDocToolsPanel() {
+        const content = document.getElementById('doc-tools-content');
+        const arrow = document.getElementById('doc-tools-arrow');
+        const badge = document.getElementById('doc-tools-badge');
         const isCollapsed = content.classList.toggle('collapsed');
         arrow.innerText = isCollapsed ? '▼' : '▲';
         badge.innerText = isCollapsed ? 'คลิกเพื่อเปิดเครื่องมือ' : 'คลิกเพื่อย่อ/ขยาย';
