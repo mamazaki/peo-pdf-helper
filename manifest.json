@@ -1,0 +1,22 @@
+{
+  "name": "PEO PDF Helper - สำนักงานศึกษาธิการจังหวัดอุดรธานี",
+  "short_name": "PEO PDF Helper",
+  "description": "ระบบจัดการ รวมไฟล์ และรันเลขหน้าเอกสารราชการแบบ Client-side 100%",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#0056b3",
+  "icons": [
+    {
+      "src": "img/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "img/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

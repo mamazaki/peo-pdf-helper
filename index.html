@@ -6,12 +6,16 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
+    <meta name="theme-color" content="#0056b3">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" href="img/logo.png">
     <title>Udon Thani Provincial Education Office PDF Helper</title>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <script src="https://unpkg.com/@pdf-lib/fontkit@0.0.4/dist/fontkit.umd.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <!-- Self-hosted libraries (pinned versions for stability & offline PWA support) -->
+    <script src="lib/pdf.min.js"></script>
+    <script src="lib/pdf-lib.min.js"></script>
+    <script src="lib/fontkit.umd.js"></script>
+    <script src="lib/Sortable.min.js"></script>
 
     <style>
         :root { 
@@ -28,7 +32,7 @@
         }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 15px; transition: 0.3s; min-height: 100vh; }
         .system-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid var(--border); flex-wrap: wrap; }
-        .header-brand { display: flex; align-items: center; gap: 10px; }
+        .header-brand { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .header-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
         .system-logo { height: 40px; width: auto; object-fit: contain; }
         .system-title { font-size: 18px; font-weight: bold; color: var(--primary); margin: 0; }
@@ -57,23 +61,31 @@
         }
         
         .system-credit { font-size: 10px; color: #777; width: 100%; text-align: right; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-weight: 500; }
-        #pdf-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; }
+        #pdf-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 15px; }
         
-        .page-card { background: var(--card-bg); padding: 8px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); position: relative; display: flex; flex-direction: column; cursor: grab; border: 2px solid var(--border); user-select: none; }
+        .page-card { background: var(--card-bg); padding: 8px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); position: relative; display: flex; flex-direction: column; cursor: grab; border: 2px solid var(--border); user-select: none; transition: border-color 0.15s, box-shadow 0.15s; }
         .page-card:hover { border-color: var(--primary); }
+        .page-card.selected { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.28); background: rgba(0, 86, 179, 0.04); }
+        [data-theme="dark"] .page-card.selected { box-shadow: 0 0 0 3px rgba(55, 147, 255, 0.35); background: rgba(55, 147, 255, 0.08); }
         .page-card.blank-card { border-style: dashed; background: rgba(0, 86, 179, 0.03); }
         .canvas-wrapper { width: 100%; aspect-ratio: 1 / 1.4; background: #f8f9fa; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 4px; position: relative; }
         .page-card canvas { max-width: 100%; max-height: 100%; transition: transform 0.3s; }
         
         .number-preview { position: absolute; color: #000000 !important; background: rgba(255, 255, 255, 0.92) !important; border: 1px dashed #000000 !important; padding: 2px 4px; font-size: 11px; pointer-events: none; display: none; z-index: 20; white-space: nowrap; line-height: 1.1; }
         #zoom-number-preview { background: transparent !important; border: 1px dashed rgba(0, 0, 0, 0.5) !important; padding: 0; }
-        .page-info { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.7); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; z-index: 10; }
-        .page-badge-extra { position: absolute; top: 4px; right: 4px; background: var(--info); color: white; padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: bold; z-index: 10; }
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 8px; }
+        .page-info { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.72); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; z-index: 10; }
+        .card-select-wrap { position: absolute; top: 4px; right: 4px; z-index: 15; background: rgba(255,255,255,0.92); border-radius: 4px; padding: 2px; display: flex; align-items: center; justify-content: center; border: 1px solid #ccc; cursor: pointer; }
+        .card-select-cb { width: 15px; height: 15px; margin: 0; cursor: pointer; accent-color: var(--primary); }
+        .file-source-tag { margin-top: 6px; font-size: 10.5px; padding: 2px 6px; border-radius: 4px; background: var(--bg); border-left: 4px solid var(--primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); font-weight: 500; }
+
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin-top: 6px; }
         .controls button { padding: 4px; font-size: 11px; cursor: pointer; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); border-radius: 4px; }
         .toggle-print-label { grid-column: span 2; font-size: 10px; display: flex; align-items: center; justify-content: center; gap: 4px; cursor: pointer; padding: 4px; border-radius: 4px; font-weight: bold; background: #e3f2fd; color: #0056b3; border: 1px solid #b6d4fe; }
         .toggle-print-label.disabled { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
         
+        /* Batch Action Bar */
+        .batch-bar { background: var(--card-bg); border: 1px solid var(--primary); border-radius: 8px; padding: 8px 14px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; box-shadow: 0 2px 6px rgba(0,86,179,0.08); }
+
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10000; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .modal-box { background: var(--card-bg); color: var(--text); padding: 20px 24px; border-radius: 12px; max-width: 540px; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid var(--border); position: relative; max-height: 90vh; overflow-y: auto; }
         .modal-title { font-size: 17px; font-weight: bold; color: var(--primary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
@@ -91,7 +103,7 @@
         body.drag-over { outline: 5px dashed var(--primary); outline-offset: -10px; background: rgba(0, 86, 179, 0.1); }
         
         /* Accordion / Tool Panel */
-        .advanced-bar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        .advanced-bar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 15px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
         .adv-header { display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
         .adv-title { font-size: 13.5px; font-weight: bold; color: var(--primary); display: flex; align-items: center; gap: 8px; }
         .adv-content { display: block; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--border); }
@@ -101,6 +113,8 @@
         .adv-card-title { font-size: 12px; font-weight: bold; margin-bottom: 8px; color: var(--primary); display: flex; align-items: center; gap: 6px; }
         .form-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
         .form-row label { min-width: 65px; margin: 0; font-size: 11px; text-transform: none; }
+        .section-rule-row { display: flex; gap: 4px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; background: var(--card-bg); padding: 5px; border-radius: 5px; border: 1px solid var(--border); }
+        .section-rule-row input, .section-rule-row select { height: 26px; font-size: 11.5px; padding: 2px 4px; }
 
         /* Manual Modal Styles */
         .manual-modal-box { max-width: 860px; width: 95%; max-height: 88vh; padding: 24px; border-radius: 14px; }
@@ -120,7 +134,11 @@
 
 <div id="loading">
     <div style="font-size: 24px; margin-bottom: 10px; color: var(--primary); font-weight: bold;">⏳ น้องยูดีกำลังจัดการให้ค่ะ...</div>
-    <div id="loading-status" style="font-size: 15px; font-weight: 500;">โปรดรอสักครู่</div>
+    <div id="loading-status" style="font-size: 15px; font-weight: 500; margin-bottom: 10px;">โปรดรอสักครู่</div>
+    <div style="width: 280px; max-width: 85vw; height: 10px; background: var(--border); border-radius: 999px; overflow: hidden; margin-bottom: 14px;">
+        <div id="loading-progress" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.15s;"></div>
+    </div>
+    <button type="button" id="btn-cancel-task" class="btn btn-danger" onclick="cancelCurrentTask()" style="display:none;">❌ ยกเลิกการทำงาน</button>
 </div>
 
 <div id="alert-modal" class="modal-overlay">
@@ -138,7 +156,7 @@
     <div class="header-brand">
         <img src="img/logo.png" alt="PEO Udon Logo" class="system-logo" onerror="this.style.display='none'">
         <h1 class="system-title">Udon Thani Provincial Education Office PDF Helper</h1>
-        <span style="font-size:11px; background:var(--success); color:white; padding:3px 10px; border-radius:12px; font-weight:bold;">v1.5.0 สารบรรณ</span>
+        <span style="font-size:11px; background:var(--success); color:white; padding:3px 10px; border-radius:12px; font-weight:bold;">v1.6.0 Offline + สารบรรณ</span>
     </div>
     <div class="header-actions">
         <button type="button" class="btn btn-warning" style="font-size:12px; height:30px; padding:2px 12px;" onclick="openManualModal()">📖 คู่มือการใช้งานราชการ</button>
@@ -150,8 +168,8 @@
     <!-- Main Toolbar -->
     <div class="toolbar">
         <div class="history-group">
-            <button id="btn-undo" class="btn" title="ย้อนกลับ (Undo)" disabled>↩️</button>
-            <button id="btn-redo" class="btn" title="ทำซ้ำ (Redo)" disabled>↪️</button>
+            <button id="btn-undo" class="btn" title="ย้อนกลับ (Ctrl+Z)" disabled>↩️</button>
+            <button id="btn-redo" class="btn" title="ทำซ้ำ (Ctrl+Y)" disabled>↪️</button>
         </div>
 
         <div class="input-group">
@@ -222,14 +240,19 @@
             </div>
         </div>
 
+        <div class="input-group" style="min-width: 150px; max-width: 190px;">
+            <label>📝 ชื่อไฟล์ส่งออก:</label>
+            <input type="text" id="export-filename" placeholder="อัตโนมัติ (PEO_PDF_...)">
+        </div>
+
         <div class="btn-group-mobile" style="display:flex; gap:6px; align-items: flex-end;">
             <button id="btn-preview-toggle" class="btn" style="background:#6c757d; color:white;">👁️ ดูเลข</button>
             <button id="btn-clear" class="btn btn-danger">🗑️ ล้างทั้งหมด</button>
-            <button id="btn-export" class="btn btn-success">💾 Download PDF</button>
+            <button id="btn-export" class="btn btn-success" title="ส่งออกไฟล์ (Ctrl+S)">💾 Download PDF</button>
         </div>
 
         <div class="system-credit">
-            ออกแบบ และพัฒนาโดย นายสุทธิชัย ชมชื่น นักวิชาการคอมพิวเตอร์ชำนาญการ กลุ่มนโยบายและแผน สำนักงานศึกษาธิการจังหวัดอุดรธานี
+            ออกแบบ และพัฒนาโดย นายสุทธิชัย ชมชื่น นักวิชาการคอมพิวเตอร์ชำนาญการ กลุ่มนโยบายและแผน สำนักงานศึกษาธิการจังหวัดอุดรธานี | คีย์ลัด: Ctrl+Z ย้อนกลับ · Ctrl+Y ทำซ้ำ · Ctrl+A เลือกทั้งหมด · R หมุน · Del ลบ · Ctrl+S บันทึก
         </div>
     </div>
 
@@ -350,7 +373,7 @@
                     </label>
                 </div>
 
-                <!-- แยกไฟล์ Split + ช่วงเลขหน้าแยกส่วน -->
+                <!-- แยกไฟล์ Split + ข้ามหน้า + ล้าง Metadata -->
                 <div class="adv-card">
                     <div class="adv-card-title">
                         <span>✂️ แยกช่วงหน้า / ตัดแบ่งไฟล์</span>
@@ -364,14 +387,46 @@
                     </div>
                     <hr style="border:0; border-top:1px dashed var(--border); margin:10px 0;">
                     <div class="adv-card-title">
-                        <span>🔢 ข้ามหน้าไม่นับเลข</span>
+                        <span>🔢 ตั้งค่าเลขหน้าและความปลอดภัย</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+                        <input type="checkbox" id="skip-unprinted-count" onchange="if(isPreviewOpen) updatePreviewNumbers(); saveSettings();">
+                        <label for="skip-unprinted-count" style="margin:0; font-size:11.5px; cursor:pointer;">หน้าที่ "ซ่อนเลข" ไม่ให้นับสะสม</label>
                     </div>
                     <div style="display:flex; align-items:center; gap:6px;">
-                        <input type="checkbox" id="skip-unprinted-count" onchange="if(isPreviewOpen) updatePreviewNumbers(); saveSettings();">
-                        <label for="skip-unprinted-count" style="margin:0; font-size:11.5px; cursor:pointer;">หน้าที่ "ซ่อนเลข" ไม่ให้นับสะสม (ข้ามไปนับ 1 ในหน้าที่เริ่มพิมพ์)</label>
+                        <input type="checkbox" id="clean-metadata" checked onchange="saveSettings();">
+                        <label for="clean-metadata" style="margin:0; font-size:11.5px; cursor:pointer;">🧹 ล้างข้อมูลผู้สร้างเดิม (Metadata) ก่อนส่งออก</label>
                     </div>
                 </div>
+
+                <!-- แบ่งชุดเลขหน้าหลายช่วงในไฟล์เดียว -->
+                <div class="adv-card">
+                    <div class="adv-card-title">
+                        <span>📑 แบ่งชุดเลขหน้าหลายช่วงในไฟล์เดียว</span>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                        <input type="checkbox" id="section-num-enable" onchange="toggleSectionNumbering()">
+                        <label for="section-num-enable" style="margin:0; font-size:12px; cursor:pointer; color:var(--primary);">เปิดใช้เลขหน้าแยกตามช่วง</label>
+                    </div>
+                    <div id="section-rules-list"></div>
+                    <button type="button" class="btn btn-secondary" style="height:26px; font-size:11.5px; margin-top:4px;" onclick="addSectionRule()">➕ เพิ่มช่วงเลขหน้า</button>
+                </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Batch Selection Action Bar -->
+    <div id="batch-bar" class="batch-bar" style="display:none;">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span id="batch-count" style="font-weight:bold; font-size:13px; color:var(--primary);">เลือกอยู่ 0 หน้า</span>
+            <button type="button" class="btn btn-secondary" style="height:28px; font-size:12px;" onclick="selectAllCards(true)">☑️ เลือกทั้งหมด</button>
+            <button type="button" class="btn btn-secondary" style="height:28px; font-size:12px;" onclick="selectAllCards(false)">⬜ ยกเลิกเลือก</button>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-primary batch-action-btn" style="height:28px; font-size:12px;" onclick="batchRotate(90)" disabled>🔄 หมุนที่เลือก</button>
+            <button type="button" class="btn btn-info batch-action-btn" style="height:28px; font-size:12px;" onclick="batchSetPrint(true)" disabled>🖨️ พิมพ์เลขที่เลือก</button>
+            <button type="button" class="btn btn-warning batch-action-btn" style="height:28px; font-size:12px;" onclick="batchSetPrint(false)" disabled>🚫 ซ่อนเลขที่เลือก</button>
+            <button type="button" class="btn btn-danger batch-action-btn" style="height:28px; font-size:12px;" onclick="batchDelete()" disabled>🗑️ ลบที่เลือก</button>
         </div>
     </div>
 
@@ -390,14 +445,14 @@
         </div>
         
         <div class="manual-container">
-            <!-- 0. ข้อมูลทั่วไปและความปลอดภัย -->
+            <!-- 1. ข้อมูลทั่วไปและความปลอดภัย -->
             <div class="manual-section" style="border-left-color: #28a745;">
                 <h3>🛡️ 1. ความปลอดภัยของข้อมูลเอกสารราชการ (Data Privacy & Security)</h3>
                 <p style="margin:0 0 6px 0;">ระบบนี้ได้รับการออกแบบตามหลักธรรมาภิบาลข้อมูลภาครัฐ โดยทำงานแบบ <b>Client-side Processing 100%</b> ผ่านเว็บเบราว์เซอร์:</p>
                 <ul style="margin:0 0 6px 20px; padding:0;">
                     <li><b>ไม่ส่งไฟล์ขึ้น Server:</b> ไฟล์เอกสาร หนังสือราชการ และรูปภาพที่นำเข้า จะประมวลผลอยู่เฉพาะในหน่วยความจำ (RAM) ของเครื่องคอมพิวเตอร์ผู้ใช้งานเท่านั้น</li>
-                    <li><b>ความลับไม่รั่วไหล:</b> ปลอดภัยสำหรับการรวมเอกสารลับ เอกสารทางการเงิน และข้อมูลส่วนบุคคล (PDPA)</li>
-                    <li><b>ใช้งานออฟไลน์ได้:</b> เมื่อโหลดหน้าเว็บเสร็จสมบูรณ์ สามารถตัดอินเทอร์เน็ตแล้วทำงานต่อได้ทันที</li>
+                    <li><b>ล้างข้อมูลผู้สร้างเดิม (Clean Metadata):</b> ระบบจะล้างชื่อผู้สร้างและโปรแกรมเก่าที่ฝังอยู่ใน PDF ออกให้อัตโนมัติก่อนดาวน์โหลด</li>
+                    <li><b>ใช้งานออฟไลน์เต็มรูปแบบ (PWA):</b> ไลบรารีทั้งหมดเก็บอยู่บนเซิร์ฟเวอร์ของหน่วยงานและรองรับ Service Worker เมื่อเปิดใช้งานแล้วสามารถทำงานได้แม้ไม่มีอินเทอร์เน็ต</li>
                 </ul>
             </div>
 
@@ -408,37 +463,27 @@
                     <span class="manual-step-num">1</span> <b>เลือกตำแหน่งแทรก:</b> ที่ช่อง <code>📍 แทรกไฟล์ที่:</code> เลือกว่าต้องการนำไฟล์ใหม่ไปไว้ <i>"ต่อท้ายสุด"</i> หรือแทรกคั่นหลังหน้าที่กำหนด
                 </div>
                 <div class="manual-step">
-                    <span class="manual-step-num">2</span> <b>นำเข้าไฟล์:</b> ทำได้ 2 วิธี
-                    <ul>
-                        <li>กดปุ่ม <code>➕ เพิ่มไฟล์ PDF / รูปภาพ</code> แล้วเลือกไฟล์จากคอมพิวเตอร์ (เลือกพร้อมกันได้หลายไฟล์)</li>
-                        <li>หรือ <b>ลากไฟล์ (Drag & Drop)</b> จากโฟลเดอร์ในเครื่องมาปล่อยลงบนหน้าต่างโปรแกรมได้โดยตรง</li>
-                    </ul>
+                    <span class="manual-step-num">2</span> <b>นำเข้าไฟล์:</b> กดปุ่ม <code>➕ เพิ่มไฟล์ PDF / รูปภาพ</code> หรือ <b>ลากไฟล์ (Drag & Drop)</b> มาปล่อยบนหน้าต่างโปรแกรมได้โดยตรง
                 </div>
                 <div class="manual-step">
-                    <span class="manual-step-num">3</span> <b>การแทรกรูปภาพ (JPG/PNG):</b> ระบบจะแปลงภาพถ่ายใบเสร็จ หนังสือรับรอง หรือภาพสแกน ให้เป็นหน้ากระดาษ A4 มาตรฐานให้อัตโนมัติ
+                    <span class="manual-step-num">3</span> <b>ป้ายสีแยกไฟล์ต้นฉบับ:</b> แต่ละหน้าจะแสดงแถบสีและชื่อไฟล์ต้นฉบับด้านล่างภาพ เพื่อให้แยกออกทันทีว่าหน้าใดมาจากไฟล์ใด (หากนำเข้าไฟล์ใหญ่สามารถกดปุ่ม <code>❌ ยกเลิกการทำงาน</code> บนแถบความคืบหน้าได้)
                 </div>
                 <div class="manual-tip">
                     💡 <b>คำแนะนำ:</b> หากระบบแจ้งเตือนว่าไฟล์ติดรหัสผ่าน ให้เปิดไฟล์ด้วยเบราว์เซอร์ แล้วกดสั่งพิมพ์ (Print) เลือก <i>"Save as PDF"</i> เพื่อถอดรหัสก่อนนำเข้าค่ะ
                 </div>
             </div>
 
-            <!-- 3. การจัดเรียงและจัดการหน้า -->
+            <!-- 3. การจัดเรียงและจัดการหลายหน้าพร้อมกัน -->
             <div class="manual-section">
-                <h3>📑 3. ขั้นตอนการจัดเรียง หมุน และลบหน้าเอกสาร</h3>
+                <h3>📑 3. การจัดเรียง จัดการหลายหน้าพร้อมกัน และคีย์ลัด</h3>
                 <div class="manual-step">
-                    <span class="manual-step-num">1</span> <b>สลับลำดับหน้า:</b> คลิกเมาส์ค้างที่การ์ดหน้าเอกสาร แล้ว <b>ลากและวาง (Drag & Drop)</b> เพื่อสลับตำแหน่งได้ตามต้องการ เลขลำดับจะอัปเดตให้อัตโนมัติ
+                    <span class="manual-step-num">1</span> <b>สลับลำดับหน้า:</b> คลิกเมาส์ค้างที่การ์ดหน้าเอกสาร แล้ว <b>ลากและวาง (Drag & Drop)</b> เพื่อสลับตำแหน่ง
                 </div>
                 <div class="manual-step">
-                    <span class="manual-step-num">2</span> <b>หมุนหน้าเอกสาร:</b> กดปุ่ม <code>🔄 หมุน</code> บนการ์ด เพื่อหมุนหน้าแนวนอน/แนวตั้งครั้งละ 90 องศา
+                    <span class="manual-step-num">2</span> <b>เลือกหลายหน้าพร้อมกัน (Multi-select):</b> ติ๊กช่องสี่เหลี่ยมมุมขวาบนของการ์ด หรือใช้ <code>Ctrl+คลิก</code> / <code>Shift+คลิก</code> จากนั้นใช้แถบคำสั่งด้านบนเพื่อ <b>หมุนพร้อมกัน / พิมพ์เลข / ซ่อนเลข / ลบพร้อมกัน</b>
                 </div>
                 <div class="manual-step">
-                    <span class="manual-step-num">3</span> <b>ตรวจสอบความชัดเจน:</b> กดปุ่ม <code>🔍 ขยาย</code> เพื่อเปิดดูเนื้อหาเอกสารขนาดใหญ่แบบละเอียด
-                </div>
-                <div class="manual-step">
-                    <span class="manual-step-num">4</span> <b>ลบหน้าที่ไม่ใช้:</b> กดปุ่มสีแดง <code>🗑️ ลบ</code> เพื่อนำหน้านั้นออกจากชุดเอกสาร
-                </div>
-                <div class="manual-step">
-                    <span class="manual-step-num">5</span> <b>การย้อนกลับ (Undo/Redo):</b> หากลบผิดหรือหมุนผิด สามารถกดปุ่ม <code>↩️ Undo</code> หรือ <code>↪️ Redo</code> เพื่อย้อนกลับได้ตลอดเวลา
+                    <span class="manual-step-num">3</span> <b>คีย์ลัด (Keyboard Shortcuts):</b> <code>Ctrl+Z</code> ย้อนกลับ · <code>Ctrl+Y</code> ทำซ้ำ · <code>Ctrl+A</code> เลือกทั้งหมด · <code>R</code> หมุนหน้าที่เลือก · <code>Delete</code> ลบหน้าที่เลือก · <code>Ctrl+S</code> ดาวน์โหลด PDF · <code>Esc</code> ยกเลิกเลือก/ปิดหน้าต่าง
                 </div>
             </div>
 
@@ -446,13 +491,10 @@
             <div class="manual-section">
                 <h3>🔢 4. ขั้นตอนการตั้งค่ารันเลขหน้าหนังสือราชการ</h3>
                 <div class="manual-step">
-                    <span class="manual-step-num">1</span> <b>เปิดระบบรันเลข:</b> ติ๊กถูกที่ช่อง <code>สถานะการรันเลข</code> ให้เป็นสีเขียว <i>"เปิดการรันเลข"</i> (หากต้องการแค่รวมไฟล์โดยไม่ใส่เลขหน้า ให้เอาติ๊กออก)
+                    <span class="manual-step-num">1</span> <b>เปิดระบบรันเลข:</b> ติ๊กถูกที่ช่อง <code>สถานะการรันเลข</code> ให้เป็นสีเขียว <i>"เปิดการรันเลข"</i>
                 </div>
                 <div class="manual-step">
-                    <span class="manual-step-num">2</span> <b>กำหนดเลขหน้าเริ่มต้น:</b> ช่อง <code>เริ่มที่หน้า</code> ใส่เลขที่ต้องการให้เริ่มนับ เช่น เริ่มหน้า 1 หรือเริ่มหน้าที่ 15 ของเล่ม
-                </div>
-                <div class="manual-step">
-                    <span class="manual-step-num">3</span> <b>เลือกรูปแบบตัวเลขราชการ:</b>
+                    <span class="manual-step-num">2</span> <b>กำหนดเลขหน้าเริ่มต้นและรูปแบบ:</b>
                     <table class="manual-table">
                         <tr><th>ตัวเลือก</th><th>รูปแบบตัวอย่าง</th><th>ลักษณะการใช้งานราชการ</th></tr>
                         <tr><td><b>เลขไทย</b></td><td>๑, - ๑ -, หน้า ๑, หน้า ๑ / ๙</td><td>หนังสือราชการทางการ, ระเบียบ, คำสั่ง, ประกาศ</td></tr>
@@ -461,16 +503,10 @@
                     </table>
                 </div>
                 <div class="manual-step">
-                    <span class="manual-step-num">4</span> <b>เลือกฟอนต์และขนาด:</b> ใช้ฟอนต์มาตรฐาน <b>TH Sarabun New</b> ขนาดแนะนำคือ 16pt (สามารถเลือกสไตล์ หนา หรือ เอียง ได้)
+                    <span class="manual-step-num">3</span> <b>แบ่งชุดเลขหน้าหลายช่วงในไฟล์เดียว:</b> หากต้องการให้หน้า 1–5 ใช้ตัวอักษร <i>ก ข ค</i> แล้วหน้า 6 เป็นต้นไปเริ่มนับเลขไทย <i>๑, ๒, ๓</i> ใหม่ สามารถเปิดใช้ในกล่อง <b>📑 แบ่งชุดเลขหน้าหลายช่วงในไฟล์เดียว</b> ได้ทันที
                 </div>
                 <div class="manual-step">
-                    <span class="manual-step-num">5</span> <b>ตำแหน่งและการหลบมุม:</b> เลือกตำแหน่ง (ปกติแนะนำ <i>ขวาบน</i>) และสามารถใส่ค่าในช่อง <code>ขยับตำแหน่ง ↔️ ↕️</code> เพื่อเลื่อนหลบตราประทับหรือหัวกระดาษได้ละเอียดในระดับพิกเซล
-                </div>
-                <div class="manual-step">
-                    <span class="manual-step-num">6</span> <b>พรีวิวดูตำแหน่งจริง:</b> กดปุ่ม <code>👁️ ดูเลข</code> ตัวเลขหน้าจำลองจะปรากฏบนหน้าเอกสารทันที
-                </div>
-                <div class="manual-step">
-                    <span class="manual-step-num">7</span> <b>การซ่อนเลขหน้าปก:</b> ที่หน้าปกหรือใบปะหน้า ให้คลิกปุ่ม <code>🖨️ พิมพ์เลข</code> ให้เปลี่ยนเป็นสีชมพู <code>🚫 ซ่อนเลข</code> หน้านั้นจะไม่ถูกพิมพ์เลขทับ
+                    <span class="manual-step-num">4</span> <b>ฟอนต์และตำแหน่ง:</b> ใช้ฟอนต์มาตรฐาน <b>TH Sarabun New</b> ปรับระยะ <code>ขยับตำแหน่ง ↔️ ↕️</code> และกด <code>👁️ ดูเลข</code> เพื่อพรีวิวก่อนดาวน์โหลด
                 </div>
             </div>
 
@@ -480,18 +516,13 @@
                 
                 <p><b>📥 5.1 การประทับเลขรับหนังสือ / ตรายางสารบรรณ</b></p>
                 <ol style="margin:0 0 10px 20px; padding:0;">
-                    <li>ติ๊กถูกที่ <code>เปิดใช้งานตรายางรับหนังสือ</code></li>
-                    <li>กรอก <b>สังกัด/กลุ่ม</b> (เช่น <i>ศธจ.อุดรธานี</i> หรือ <i>กลุ่มนโยบายและแผน</i>)</li>
-                    <li>กรอก <b>เลขที่รับ</b> (เช่น <i>๑๒๓/๒๕๖๙</i>)</li>
-                    <li>ตรวจสอบ <b>วันที่รับ</b> และ <b>เวลารับ</b> (ระบบจะกรอกวันที่-ปี พ.ศ. ปัจจุบันเป็นเลขไทยให้อัตโนมัติ)</li>
-                    <li>เลือกให้ประทับ <i>หน้าแรกเท่านั้น</i> และเลือกมุม <i>ขวาบน (TR)</i> หรือ <i>ซ้ายบน (TL)</i></li>
+                    <li>ติ๊กถูกที่ <code>เปิดใช้งานตรายางรับหนังสือ</code> และกรอก <b>สังกัด/กลุ่ม</b>, <b>เลขที่รับ</b>, <b>วันที่</b>, <b>เวลา</b></li>
+                    <li>เลือกประทับ <i>หน้าแรกเท่านั้น</i> หรือ <i>ทุกหน้า</i> และเลือกมุม <i>ขวาบน</i> หรือ <i>ซ้ายบน</i></li>
                 </ol>
 
                 <p><b>🛡️ 5.2 การประทับตราลายน้ำเอกสาร (Watermark)</b></p>
                 <ol style="margin:0 0 10px 20px; padding:0;">
-                    <li>ติ๊กถูกที่ <code>เปิดประทับลายน้ำ</code></li>
-                    <li>เลือกข้อความสำเร็จรูป เช่น <i>สำเนาถูกต้อง</i>, <i>เอกสารราชการลับ</i>, <i>ร่าง - ห้ามเผยแพร่</i> หรือพิมพ์ข้อความเอง</li>
-                    <li>เลือกสี (แดง, เทา, น้ำเงิน) และมุมเอียง 45 องศา ระบบจะประทับกึ่งกลางทุกหน้าอย่างโปร่งแสง ไม่บดบังเนื้อหา</li>
+                    <li>ติ๊กถูกที่ <code>เปิดประทับลายน้ำ</code> เลือกข้อความสำเร็จรูปหรือพิมพ์เอง พร้อมเลือกสีและมุมเอียง</li>
                 </ol>
 
                 <p><b>📄 5.3 การแทรกหน้าว่าง A4 และหน้าคั่นข้อความ</b></p>
@@ -502,27 +533,23 @@
 
                 <p><b>✂️ 5.4 การตัดแบ่ง / แยกช่วงหน้า (Split)</b></p>
                 <ul style="margin:0 0 10px 20px; padding:0;">
-                    <li>ในช่อง <code>ช่วงหน้า:</code> ให้พิมพ์หน้าที่ต้องการ เช่น <code>1-5, 8, 10-12</code></li>
-                    <li>กดปุ่ม <code>💾 ดาวน์โหลดเฉพาะช่วงนี้</code> เพื่อสร้างไฟล์ PDF เฉพาะหน้าที่เลือกโดยไม่ต้องส่งออกทั้งเล่ม</li>
+                    <li>ในช่อง <code>ช่วงหน้า:</code> พิมพ์หน้าที่ต้องการ เช่น <code>1-5, 8, 10-12</code> แล้วกด <code>💾 ดาวน์โหลดเฉพาะช่วงนี้</code></li>
                 </ul>
 
                 <p><b>🔢 5.5 การข้ามหน้าซ่อนเลข ไม่ให้นับสะสม</b></p>
                 <ul style="margin:0 0 6px 20px; padding:0;">
-                    <li>ติ๊กที่ช่อง <code>หน้าที่ "ซ่อนเลข" ไม่ให้นับสะสม</code> เหมาะสำหรับกรณีที่มีหน้าปก 1 หน้า แล้วต้องการให้เนื้อหาหน้าถัดไปเริ่มนับเป็น <b>หน้า 1</b> ทันที</li>
+                    <li>ติ๊กที่ช่อง <code>หน้าที่ "ซ่อนเลข" ไม่ให้นับสะสม</code> เพื่อให้หน้าถัดจากหน้าปกเริ่มนับเป็น <b>หน้า 1</b> ทันที</li>
                 </ul>
             </div>
 
             <!-- 6. การส่งออกและดาวน์โหลด -->
             <div class="manual-section" style="border-left-color: #28a745;">
-                <h3>💾 6. การส่งออกและบันทึกไฟล์ (Export PDF)</h3>
+                <h3>💾 6. การตั้งชื่อไฟล์และดาวน์โหลด (Export PDF)</h3>
                 <div class="manual-step">
-                    <span class="manual-step-num">1</span> ตรวจสอบความถูกต้องของลำดับหน้าและการตั้งค่าทั้งหมด
+                    <span class="manual-step-num">1</span> พิมพ์ชื่อไฟล์ที่ต้องการในช่อง <code>📝 ชื่อไฟล์ส่งออก:</code> (ระบบจะตั้งชื่อเริ่มต้นให้อัตโนมัติจากไฟล์แรกที่นำเข้า)
                 </div>
                 <div class="manual-step">
-                    <span class="manual-step-num">2</span> กดปุ่มสีเขียว <code>💾 Download PDF</code> ที่แถบเครื่องมือด้านบน
-                </div>
-                <div class="manual-step">
-                    <span class="manual-step-num">3</span> ระบบจะประมวลผล ฝังฟอนต์สารบรรณ และดาวน์โหลดไฟล์ลงในโฟลเดอร์ Downloads ของเครื่องโดยตั้งชื่อตามวันและเวลาให้อัตโนมัติ เช่น <code>PEO_PDF_20261109_1015.pdf</code>
+                    <span class="manual-step-num">2</span> กดปุ่มสีเขียว <code>💾 Download PDF</code> (หรือกด <code>Ctrl+S</code>) เพื่อบันทึกไฟล์ลงเครื่อง
                 </div>
             </div>
         </div>
@@ -543,6 +570,10 @@
 
 <script>
     const SETTINGS_KEY = 'peo_pdf_helper_settings';
+    const FILE_COLORS = ['#0056b3', '#28a745', '#d9534f', '#8e44ad', '#e67e22', '#17a2b8', '#c0392b', '#16a085'];
+    let fileColorCounter = 0;
+    let lastSelectedCard = null;
+    let isTaskCancelled = false;
 
     function toggleTheme() {
         const body = document.documentElement;
@@ -573,6 +604,30 @@
         const isCollapsed = content.classList.toggle('collapsed');
         arrow.innerText = isCollapsed ? '▼' : '▲';
         badge.innerText = isCollapsed ? 'คลิกเพื่อเปิดเครื่องมือ' : 'คลิกเพื่อย่อ/ขยาย';
+    }
+
+    function showLoading(statusText, pct = 0, cancellable = false) {
+        isTaskCancelled = false;
+        loading.style.display = 'flex';
+        setLoadingProgress(pct, statusText, cancellable);
+    }
+
+    function setLoadingProgress(pct, statusText, cancellable = true) {
+        if (statusText !== undefined) document.getElementById('loading-status').innerText = statusText;
+        document.getElementById('loading-progress').style.width = Math.max(0, Math.min(100, pct)) + '%';
+        document.getElementById('btn-cancel-task').style.display = cancellable ? 'inline-flex' : 'none';
+    }
+
+    function hideLoading() {
+        loading.style.display = 'none';
+        document.getElementById('loading-progress').style.width = '0%';
+        document.getElementById('btn-cancel-task').style.display = 'none';
+    }
+
+    function cancelCurrentTask() {
+        isTaskCancelled = true;
+        document.getElementById('loading-status').innerText = 'กำลังยกเลิกการทำงาน...';
+        document.getElementById('btn-cancel-task').style.display = 'none';
     }
 
     let confirmCallback = null;
@@ -623,6 +678,67 @@
         return String(str).replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
     }
 
+    function escapeHtml(text) {
+        return String(text).replace(/[&<>"']/g, m => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+    }
+
+    // -------------------------------------------------------------
+    // Section Numbering Rules (Multi-section in one PDF)
+    // -------------------------------------------------------------
+    function getSectionRulesFromUI() {
+        const rows = document.querySelectorAll('#section-rules-list .section-rule-row');
+        const rules = [];
+        rows.forEach(row => {
+            const startPage = Math.max(1, parseInt(row.querySelector('.sec-start-page').value) || 1);
+            const type = row.querySelector('.sec-type').value || 'thai';
+            const format = row.querySelector('.sec-format').value || '{n}';
+            const startNum = Math.max(1, parseInt(row.querySelector('.sec-start-num').value) || 1);
+            rules.push({ startPage, type, format, startNum });
+        });
+        return rules;
+    }
+
+    function addSectionRule(rule = { startPage: 1, type: 'thai', format: '{n}', startNum: 1 }) {
+        const list = document.getElementById('section-rules-list');
+        const row = document.createElement('div');
+        row.className = 'section-rule-row';
+        row.innerHTML = `
+            <span style="font-size:10.5px;">หน้า</span>
+            <input type="number" class="sec-start-page" min="1" value="${rule.startPage || 1}" style="width:46px;" title="เริ่มตั้งแต่ลำดับหน้าที่" onchange="onSectionRuleChange()">
+            <select class="sec-type" style="width:74px;" onchange="onSectionRuleChange()">
+                <option value="thai" ${rule.type === 'thai' ? 'selected' : ''}>เลขไทย</option>
+                <option value="arabic" ${rule.type === 'arabic' ? 'selected' : ''}>อารบิก</option>
+                <option value="thai-alpha" ${rule.type === 'thai-alpha' ? 'selected' : ''}>ก ข ค</option>
+            </select>
+            <select class="sec-format" style="width:82px;" onchange="onSectionRuleChange()">
+                <option value="{n}" ${rule.format === '{n}' ? 'selected' : ''}>{n}</option>
+                <option value="- {n} -" ${rule.format === '- {n} -' ? 'selected' : ''}>- {n} -</option>
+                <option value="หน้า {n}" ${rule.format === 'หน้า {n}' ? 'selected' : ''}>หน้า {n}</option>
+                <option value="หน้า {n} / {total}" ${rule.format === 'หน้า {n} / {total}' ? 'selected' : ''}>หน้า {n}/{total}</option>
+                <option value="({n})" ${rule.format === '({n})' ? 'selected' : ''}>({n})</option>
+            </select>
+            <span style="font-size:10.5px;">นับ</span>
+            <input type="number" class="sec-start-num" min="1" value="${rule.startNum || 1}" style="width:44px;" title="เริ่มนับเลขที่" onchange="onSectionRuleChange()">
+            <button type="button" class="btn btn-danger" style="height:24px; padding:0 6px; font-size:11px;" onclick="this.closest('.section-rule-row').remove(); onSectionRuleChange();" title="ลบช่วงนี้">✖</button>
+        `;
+        list.appendChild(row);
+    }
+
+    function onSectionRuleChange() {
+        saveSettings();
+        if (isPreviewOpen) updatePreviewNumbers();
+    }
+
+    function toggleSectionNumbering() {
+        const enabled = document.getElementById('section-num-enable').checked;
+        const list = document.getElementById('section-rules-list');
+        if (enabled && list.children.length === 0) {
+            addSectionRule({ startPage: 1, type: 'thai-alpha', format: '{n}', startNum: 1 });
+            addSectionRule({ startPage: 4, type: 'thai', format: '{n}', startNum: 1 });
+        }
+        onSectionRuleChange();
+    }
+
     function saveSettings() {
         try {
             const settings = {
@@ -644,7 +760,10 @@
                 wmSize: document.getElementById('wm-size').value,
                 wmColor: document.getElementById('wm-color').value,
                 wmAngle: document.getElementById('wm-angle').value,
-                skipUnprintedCount: document.getElementById('skip-unprinted-count').checked
+                skipUnprintedCount: document.getElementById('skip-unprinted-count').checked,
+                cleanMetadata: document.getElementById('clean-metadata').checked,
+                sectionNumEnable: document.getElementById('section-num-enable').checked,
+                sectionRules: getSectionRulesFromUI()
             };
             localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
         } catch (e) {}
@@ -683,6 +802,12 @@
             if (s.wmColor) document.getElementById('wm-color').value = s.wmColor;
             if (s.wmAngle) document.getElementById('wm-angle').value = s.wmAngle;
             if (s.skipUnprintedCount !== undefined) document.getElementById('skip-unprinted-count').checked = s.skipUnprintedCount;
+            if (s.cleanMetadata !== undefined) document.getElementById('clean-metadata').checked = s.cleanMetadata;
+            if (s.sectionNumEnable !== undefined) document.getElementById('section-num-enable').checked = s.sectionNumEnable;
+            if (Array.isArray(s.sectionRules) && s.sectionRules.length) {
+                document.getElementById('section-rules-list').innerHTML = '';
+                s.sectionRules.forEach(addSectionRule);
+            }
 
             updateFormatOptions();
             if (s.numFormat) document.getElementById('num-format').value = s.numFormat;
@@ -696,9 +821,14 @@
         }
         setDefaultStampValues();
         loadSettings();
+
+        // Register Offline Service Worker (PWA)
+        if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.protocol === 'http:')) {
+            navigator.serviceWorker.register('./sw.js').catch(() => {});
+        }
     });
 
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'lib/pdf.worker.min.js';
     const container = document.getElementById('pdf-container');
     const insertPosSelect = document.getElementById('insert-pos');
     const loading = document.getElementById('loading');
@@ -718,7 +848,100 @@
     });
 
     // -------------------------------------------------------------
-    // Undo / Redo System (Node Reference Snapshot - 100% Reliable)
+    // Multi-Select & Batch Operations
+    // -------------------------------------------------------------
+    function getSelectedCards() {
+        return Array.from(container.children).filter(c => c.classList.contains('selected'));
+    }
+
+    function setCardSelected(card, selected) {
+        card.classList.toggle('selected', selected);
+        const cb = card.querySelector('.card-select-cb');
+        if (cb) cb.checked = selected;
+    }
+
+    function updateBatchBar() {
+        const bar = document.getElementById('batch-bar');
+        const total = container.children.length;
+        if (total === 0) {
+            bar.style.display = 'none';
+            return;
+        }
+        bar.style.display = 'flex';
+        const selectedCount = getSelectedCards().length;
+        document.getElementById('batch-count').innerText = `เลือกอยู่ ${selectedCount} / ${total} หน้า`;
+        document.querySelectorAll('.batch-action-btn').forEach(btn => {
+            btn.disabled = selectedCount === 0;
+        });
+    }
+
+    function selectAllCards(select) {
+        Array.from(container.children).forEach(card => setCardSelected(card, select));
+        if (!select) lastSelectedCard = null;
+        updateBatchBar();
+    }
+
+    function handleCardSelectionClick(card, event) {
+        const allCards = Array.from(container.children);
+        if (event && event.shiftKey && lastSelectedCard && allCards.includes(lastSelectedCard)) {
+            const idx1 = allCards.indexOf(lastSelectedCard);
+            const idx2 = allCards.indexOf(card);
+            const start = Math.min(idx1, idx2);
+            const end = Math.max(idx1, idx2);
+            for (let i = start; i <= end; i++) {
+                setCardSelected(allCards[i], true);
+            }
+        } else {
+            const newState = !card.classList.contains('selected');
+            setCardSelected(card, newState);
+            lastSelectedCard = newState ? card : null;
+        }
+        updateBatchBar();
+    }
+
+    function batchRotate(deg) {
+        const selected = getSelectedCards();
+        if (!selected.length) return;
+        selected.forEach(card => {
+            card.dataset.rotation = (parseInt(card.dataset.rotation || 0) + deg) % 360;
+            const canvas = card.querySelector('canvas');
+            if (canvas) canvas.style.transform = `rotate(${card.dataset.rotation}deg)`;
+        });
+        saveHistory();
+        if (isPreviewOpen) updatePreviewNumbers();
+    }
+
+    function batchSetPrint(enablePrint) {
+        const selected = getSelectedCards();
+        if (!selected.length) return;
+        selected.forEach(card => {
+            const cb = card.querySelector('.toggle-print');
+            const lbl = card.querySelector('.toggle-print-label');
+            if (cb) {
+                cb.checked = enablePrint;
+                if (lbl) {
+                    lbl.classList.toggle('disabled', !enablePrint);
+                    lbl.querySelector('span').innerText = enablePrint ? '🖨️ พิมพ์เลข' : '🚫 ซ่อนเลข';
+                }
+            }
+        });
+        saveHistory();
+        if (isPreviewOpen) updatePreviewNumbers();
+    }
+
+    function batchDelete() {
+        const selected = getSelectedCards();
+        if (!selected.length) return;
+        showConfirm(`ต้องการลบหน้าที่เลือกทั้งหมด ${selected.length} หน้าใช่ไหมคะ? (สามารถกด Ctrl+Z หรือ Undo เพื่อย้อนกลับได้ค่ะ)`, () => {
+            selected.forEach(card => card.remove());
+            lastSelectedCard = null;
+            updateAllBadges();
+            saveHistory();
+        });
+    }
+
+    // -------------------------------------------------------------
+    // Undo / Redo System (Node Reference Snapshot)
     // -------------------------------------------------------------
     let historyStack = [];
     let redoStack = [];
@@ -763,6 +986,7 @@
         container.innerHTML = '';
         state.forEach(item => {
             const card = item.card;
+            setCardSelected(card, false);
             card.dataset.rotation = item.rotation;
             const canvas = card.querySelector('canvas');
             if (canvas) canvas.style.transform = `rotate(${item.rotation}deg)`;
@@ -779,6 +1003,7 @@
             }
             container.appendChild(card);
         });
+        lastSelectedCard = null;
         updateAllBadges();
         if (isPreviewOpen) updatePreviewNumbers();
     }
@@ -793,18 +1018,36 @@
         e.target.value = '';
     });
 
+    function suggestExportFilename(fileName) {
+        const input = document.getElementById('export-filename');
+        if (input && !input.value.trim() && fileName) {
+            const base = fileName.replace(/\.(pdf|png|jpe?g)$/i, '');
+            input.value = `${base}_รวม`;
+        }
+    }
+
     async function handleFiles(files) {
         if (!files || !files.length) return;
-        loading.style.display = 'flex';
-        document.getElementById('loading-status').innerText = 'กำลังประมวลผลไฟล์...';
+        showLoading('กำลังประมวลผลไฟล์...', 5, true);
 
         try {
-            for (const file of files) {
+            const fileArr = Array.from(files);
+            let addedAny = false;
+
+            for (let fIdx = 0; fIdx < fileArr.length; fIdx++) {
+                if (isTaskCancelled) break;
+                const file = fileArr[fIdx];
                 const lowerName = file.name.toLowerCase();
                 const isImage = file.type.startsWith('image/') || /\.(png|jpe?g)$/i.test(lowerName);
-                
+                const sourceColor = FILE_COLORS[fileColorCounter++ % FILE_COLORS.length];
+
                 if (isImage) {
-                    await handleSingleImageFile(file);
+                    const card = await createCardFromImageFile(file, sourceColor);
+                    if (card) {
+                        insertCardsAtTarget([card]);
+                        suggestExportFilename(file.name);
+                        addedAny = true;
+                    }
                     continue;
                 }
 
@@ -818,8 +1061,6 @@
                 }
 
                 const bytes = await file.arrayBuffer();
-
-                // Validate PDF Magic Bytes (%PDF-)
                 const header = new Uint8Array(bytes.slice(0, 5));
                 const headerStr = String.fromCharCode.apply(null, header);
                 if (!headerStr.startsWith('%PDF')) {
@@ -839,34 +1080,52 @@
                     continue;
                 }
 
-                const pos = insertPosSelect.value;
                 const newCards = [];
-
                 for (let i = 1; i <= pdf.numPages; i++) {
-                    document.getElementById('loading-status').innerText = `กำลังอ่านหน้า ${i} จาก ${pdf.numPages} ของไฟล์ ${file.name}...`;
+                    if (isTaskCancelled) break;
+                    const pct = Math.round((i / pdf.numPages) * 100);
+                    setLoadingProgress(pct, `กำลังอ่านหน้า ${i}/${pdf.numPages} (${file.name})...`, true);
                     const page = await pdf.getPage(i);
-                    newCards.push(await createPageCard(page, i, bytes));
+                    newCards.push(await createPageCard(page, i, bytes, { fileName: file.name, color: sourceColor }));
                 }
 
-                if (pos === 'end' || !container.children.length) {
-                    newCards.forEach(c => container.appendChild(c));
-                } else {
-                    const targetIdx = parseInt(pos);
-                    const target = container.children[targetIdx] || container.lastElementChild;
-                    newCards.reverse().forEach(c => target.after(c));
-                }
+                if (typeof pdf.destroy === 'function') pdf.destroy().catch(() => {});
+
+                if (isTaskCancelled) break;
+
+                insertCardsAtTarget(newCards);
+                suggestExportFilename(file.name);
+                addedAny = true;
             }
-            updateAllBadges();
-            saveHistory();
+
+            if (addedAny) {
+                updateAllBadges();
+                saveHistory();
+            }
+            if (isTaskCancelled) {
+                showAlert('ยกเลิกการนำเข้าไฟล์เรียบร้อยแล้วค่ะ');
+            }
         } catch (e) {
             console.error(e);
             showAlert(`เกิดข้อผิดพลาดในการโหลดไฟล์:\n${e.message}`);
         } finally {
-            loading.style.display = 'none';
+            hideLoading();
         }
     }
 
-    async function createPageCard(page, pageNum, pdfBytes) {
+    function insertCardsAtTarget(newCards) {
+        if (!newCards || !newCards.length) return;
+        const pos = insertPosSelect.value;
+        if (pos === 'end' || !container.children.length) {
+            newCards.forEach(c => container.appendChild(c));
+        } else {
+            const targetIdx = parseInt(pos);
+            const target = container.children[targetIdx] || container.lastElementChild;
+            newCards.reverse().forEach(c => target.after(c));
+        }
+    }
+
+    async function createPageCard(page, pageNum, pdfBytes, sourceMeta = { fileName: 'เอกสาร', color: '#0056b3', customTag: '' }) {
         const viewport = page.getViewport({ scale: 0.3 });
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width; canvas.height = viewport.height;
@@ -877,15 +1136,23 @@
         card.dataset.rotation = 0;
         card._pdfBytes = pdfBytes; 
         card._originalIdx = pageNum - 1;
+        card._sourceFile = sourceMeta.fileName || 'เอกสาร';
+        card._sourceColor = sourceMeta.color || '#0056b3';
 
         const isMasterEnabled = document.getElementById('master-num-toggle').checked;
         const printChecked = isMasterEnabled ? 'checked' : '';
         const printLabelClass = isMasterEnabled ? '' : 'disabled';
         const printText = isMasterEnabled ? '🖨️ พิมพ์เลข' : '🚫 ซ่อนเลข';
 
+        const tagLabel = sourceMeta.customTag || `${card._sourceFile} (น.${pageNum})`;
+
         card.innerHTML = `
             <div class="page-info"></div>
+            <label class="card-select-wrap" title="เลือกหน้านี้ (Ctrl+คลิก หรือ Shift+คลิก)">
+                <input type="checkbox" class="card-select-cb">
+            </label>
             <div class="canvas-wrapper"><div class="number-preview"></div></div>
+            <div class="file-source-tag" style="border-left-color: ${card._sourceColor};" title="${escapeHtml(tagLabel)}">${escapeHtml(tagLabel)}</div>
             <div class="controls">
                 <label class="toggle-print-label ${printLabelClass}">
                     <input type="checkbox" class="toggle-print" style="margin:0;" ${printChecked}>
@@ -904,6 +1171,26 @@
             lbl.querySelector('span').innerText = isChecked ? '🖨️ พิมพ์เลข' : '🚫 ซ่อนเลข';
             saveHistory();
             if(isPreviewOpen) updatePreviewNumbers();
+        });
+
+        card.querySelector('.card-select-wrap').addEventListener('click', (ev) => {
+            ev.stopPropagation();
+        });
+
+        card.querySelector('.card-select-cb').addEventListener('change', (ev) => {
+            ev.stopPropagation();
+            const isChecked = ev.target.checked;
+            setCardSelected(card, isChecked);
+            lastSelectedCard = isChecked ? card : null;
+            updateBatchBar();
+        });
+
+        card.addEventListener('click', (ev) => {
+            if (ev.target.closest('button, label, input')) return;
+            if (ev.ctrlKey || ev.metaKey || ev.shiftKey) {
+                ev.preventDefault();
+                handleCardSelectionClick(card, ev);
+            }
         });
 
         card.querySelector('.canvas-wrapper').prepend(canvas);
@@ -925,14 +1212,13 @@
     }
 
     async function insertBlankPage(customText = '') {
-        loading.style.display = 'flex';
-        document.getElementById('loading-status').innerText = customText ? 'กำลังสร้างหน้าคั่นข้อความ...' : 'กำลังสร้างหน้าว่าง...';
+        showLoading(customText ? 'กำลังสร้างหน้าคั่นข้อความ...' : 'กำลังสร้างหน้าว่าง...', 50, false);
         try {
             const { PDFDocument } = PDFLib;
             const blankDoc = await PDFDocument.create();
             const pageW = 595.28;
             const pageH = 841.89;
-            const blankPage = blankDoc.addPage([pageW, pageH]); // A4 Size in points
+            const blankPage = blankDoc.addPage([pageW, pageH]);
 
             if (customText) {
                 blankDoc.registerFontkit(fontkit);
@@ -977,33 +1263,24 @@
             }
 
             const blankBytes = await blankDoc.save();
-
             const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(blankBytes) }).promise;
             const page = await pdf.getPage(1);
-            const card = await createPageCard(page, 1, blankBytes);
+            const card = await createPageCard(page, 1, blankBytes, {
+                fileName: customText || 'หน้าว่าง A4',
+                color: '#6c757d',
+                customTag: customText ? `หน้าคั่น: ${customText}` : 'หน้าว่าง A4'
+            });
             card.classList.add('blank-card');
+            if (typeof pdf.destroy === 'function') pdf.destroy().catch(() => {});
 
-            const badge = document.createElement('div');
-            badge.className = 'page-badge-extra';
-            badge.innerText = customText ? 'หน้าคั่น' : 'หน้าว่าง';
-            card.appendChild(badge);
-
-            const pos = insertPosSelect.value;
-            if (pos === 'end' || !container.children.length) {
-                container.appendChild(card);
-            } else {
-                const targetIdx = parseInt(pos);
-                const target = container.children[targetIdx] || container.lastElementChild;
-                target.after(card);
-            }
-
+            insertCardsAtTarget([card]);
             updateAllBadges();
             saveHistory();
         } catch (e) {
             console.error(e);
             showAlert('ไม่สามารถสร้างหน้าว่างได้: ' + e.message);
         } finally {
-            loading.style.display = 'none';
+            hideLoading();
         }
     }
 
@@ -1012,24 +1289,33 @@
     // -------------------------------------------------------------
     async function handleImageUpload(files) {
         if (!files || !files.length) return;
-        loading.style.display = 'flex';
-        document.getElementById('loading-status').innerText = 'กำลังแปลงรูปภาพเป็นหน้าเอกสาร...';
+        showLoading('กำลังแปลงรูปภาพเป็นหน้าเอกสาร...', 10, true);
         try {
-            for (const file of files) {
-                await handleSingleImageFile(file);
+            const arr = Array.from(files);
+            const color = FILE_COLORS[fileColorCounter++ % FILE_COLORS.length];
+            const newCards = [];
+            for (let i = 0; i < arr.length; i++) {
+                if (isTaskCancelled) break;
+                setLoadingProgress(Math.round(((i + 1) / arr.length) * 100), `กำลังแปลงรูปที่ ${i + 1}/${arr.length}...`, true);
+                const c = await createCardFromImageFile(arr[i], color);
+                if (c) newCards.push(c);
             }
-            updateAllBadges();
-            saveHistory();
+            if (!isTaskCancelled && newCards.length) {
+                insertCardsAtTarget(newCards);
+                suggestExportFilename(arr[0].name);
+                updateAllBadges();
+                saveHistory();
+            }
         } catch (e) {
             console.error(e);
             showAlert('เกิดข้อผิดพลาดในการนำเข้ารูปภาพ: ' + e.message);
         } finally {
-            loading.style.display = 'none';
+            hideLoading();
             document.getElementById('image-upload').value = '';
         }
     }
 
-    async function handleSingleImageFile(file) {
+    async function createCardFromImageFile(file, color) {
         const { PDFDocument } = PDFLib;
         const doc = await PDFDocument.create();
         const imgBytes = await file.arrayBuffer();
@@ -1041,7 +1327,6 @@
             embeddedImg = await doc.embedJpg(imgBytes);
         }
 
-        // Fit into standard A4 (595.28 x 841.89) with 20pt margin
         const pageW = 595.28;
         const pageH = 841.89;
         const page = doc.addPage([pageW, pageH]);
@@ -1059,21 +1344,13 @@
 
         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBytes) }).promise;
         const pdfPage = await pdf.getPage(1);
-        const card = await createPageCard(pdfPage, 1, pdfBytes);
-
-        const badge = document.createElement('div');
-        badge.className = 'page-badge-extra';
-        badge.innerText = 'รูปภาพ';
-        card.appendChild(badge);
-
-        const pos = insertPosSelect.value;
-        if (pos === 'end' || !container.children.length) {
-            container.appendChild(card);
-        } else {
-            const targetIdx = parseInt(pos);
-            const target = container.children[targetIdx] || container.lastElementChild;
-            target.after(card);
-        }
+        const card = await createPageCard(pdfPage, 1, pdfBytes, {
+            fileName: file.name,
+            color: color,
+            customTag: `รูป: ${file.name}`
+        });
+        if (typeof pdf.destroy === 'function') pdf.destroy().catch(() => {});
+        return card;
     }
 
     // -------------------------------------------------------------
@@ -1088,15 +1365,17 @@
         const selectedIndices = parsePageRange(rangeStr, totalPages);
         if (!selectedIndices.length) return showAlert('ไม่พบหน้าที่ระบุตามช่วงที่กรอกค่ะ (มีทั้งหมด ' + totalPages + ' หน้า)');
 
-        loading.style.display = 'flex';
-        document.getElementById('loading-status').innerText = `กำลังตัดแบ่งไฟล์ ${selectedIndices.length} หน้า...`;
+        showLoading(`กำลังตัดแบ่งไฟล์ ${selectedIndices.length} หน้า...`, 10, true);
 
         try {
             const { PDFDocument, degrees } = PDFLib;
             const finalPdf = await PDFDocument.create();
             const docCache = new Map();
 
-            for (const idx of selectedIndices) {
+            for (let k = 0; k < selectedIndices.length; k++) {
+                if (isTaskCancelled) break;
+                setLoadingProgress(Math.round(((k + 1) / selectedIndices.length) * 100), `กำลังแยกหน้าที่ ${k + 1}/${selectedIndices.length}...`, true);
+                const idx = selectedIndices[k];
                 const card = container.children[idx];
                 let src = docCache.get(card._pdfBytes);
                 if (!src) {
@@ -1110,6 +1389,15 @@
                 finalPdf.addPage(page);
             }
 
+            if (isTaskCancelled) {
+                showAlert('ยกเลิกการตัดแบ่งไฟล์เรียบร้อยแล้วค่ะ');
+                return;
+            }
+
+            if (document.getElementById('clean-metadata').checked) {
+                clearPdfMetadata(finalPdf);
+            }
+
             const outBytes = await finalPdf.save();
             const blob = new Blob([outBytes], { type: 'application/pdf' });
             const a = document.createElement('a');
@@ -1121,7 +1409,7 @@
             console.error(e);
             showAlert('ไม่สามารถแยกไฟล์ได้: ' + e.message);
         } finally {
-            loading.style.display = 'none';
+            hideLoading();
         }
     }
 
@@ -1147,6 +1435,15 @@
         return Array.from(set).sort((a, b) => a - b);
     }
 
+    function clearPdfMetadata(pdfDoc) {
+        pdfDoc.setTitle('');
+        pdfDoc.setAuthor('');
+        pdfDoc.setSubject('');
+        pdfDoc.setKeywords([]);
+        pdfDoc.setProducer('');
+        pdfDoc.setCreator('');
+    }
+
     function rotateCard(card) {
         card.dataset.rotation = (parseInt(card.dataset.rotation || 0) + 90) % 360;
         const canvas = card.querySelector('canvas');
@@ -1156,6 +1453,7 @@
     }
 
     function deleteCard(card) {
+        if (lastSelectedCard === card) lastSelectedCard = null;
         card.remove();
         updateAllBadges();
         saveHistory();
@@ -1165,6 +1463,7 @@
         if (!container.children.length) return;
         showConfirm('ต้องการล้างหน้าเอกสารทั้งหมดใช่ไหมคะ?\n(หากล้างแล้ว สามารถกดปุ่ม Undo ↩️ เพื่อย้อนกลับได้ค่ะ)', () => {
             container.innerHTML = '';
+            lastSelectedCard = null;
             updateAllBadges();
             saveHistory();
         });
@@ -1180,6 +1479,7 @@
             insertPosSelect.appendChild(opt);
         }
         updateFormatOptions();
+        updateBatchBar();
         if(isPreviewOpen) updatePreviewNumbers();
     }
 
@@ -1226,36 +1526,95 @@
     }
 
     // -------------------------------------------------------------
-    // Sequence calculation (with optional skip-unprinted)
+    // Sequence calculation (supports Multi-Section + Skip-Unprinted)
     // -------------------------------------------------------------
     function calculatePageNumbers(startNum) {
         const cards = Array.from(container.children);
         const skipUnprinted = document.getElementById('skip-unprinted-count').checked;
-        const numbers = [];
-        let cur = startNum;
-        let printableTotal = 0;
+        const useSections = document.getElementById('section-num-enable').checked;
+        const globalType = document.getElementById('num-type').value;
+        const globalFormat = document.getElementById('num-format').value || '{n}';
 
-        for (let i = 0; i < cards.length; i++) {
-            const isPrint = cards[i].querySelector('.toggle-print') && cards[i].querySelector('.toggle-print').checked;
-            if (isPrint) {
-                numbers.push(cur);
-                cur++;
-                printableTotal++;
-            } else {
-                numbers.push(cur);
-                if (!skipUnprinted) {
+        if (!useSections) {
+            const numbers = [];
+            let cur = startNum;
+            let printableTotal = 0;
+
+            for (let i = 0; i < cards.length; i++) {
+                const isPrint = cards[i].querySelector('.toggle-print') && cards[i].querySelector('.toggle-print').checked;
+                if (isPrint) {
+                    numbers.push(cur);
                     cur++;
+                    printableTotal++;
+                } else {
+                    numbers.push(cur);
+                    if (!skipUnprinted) cur++;
                 }
             }
+            const total = skipUnprinted ? Math.max(printableTotal, 1) : Math.max(cards.length, 1);
+            const perPage = cards.map((_, i) => ({
+                num: numbers[i],
+                total: total,
+                type: globalType,
+                format: globalFormat
+            }));
+            return { numbers, total, perPage };
         }
-        const total = skipUnprinted ? Math.max(printableTotal, 1) : Math.max(cards.length, 1);
-        return { numbers, total };
+
+        // Multi-section calculation
+        const rules = getSectionRulesFromUI().sort((a, b) => a.startPage - b.startPage);
+        if (!rules.length) {
+            rules.push({ startPage: 1, type: globalType, format: globalFormat, startNum });
+        }
+
+        const matchedRulePerCard = cards.map((_, i) => {
+            const p = i + 1;
+            let matched = rules[0];
+            for (const r of rules) {
+                if (r.startPage <= p) matched = r;
+                else break;
+            }
+            return matched;
+        });
+
+        // Group cards by matched rule instance to compute section totals and counters
+        const sectionState = new Map();
+        const perPage = cards.map((card, i) => {
+            const rule = matchedRulePerCard[i];
+            if (!sectionState.has(rule)) {
+                sectionState.set(rule, { cur: rule.startNum, allCount: 0, printableCount: 0 });
+            }
+            const st = sectionState.get(rule);
+            const isPrint = card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked;
+            const assignedNum = st.cur;
+            st.allCount++;
+            if (isPrint) {
+                st.printableCount++;
+                st.cur++;
+            } else if (!skipUnprinted) {
+                st.cur++;
+            }
+            return { rule, num: assignedNum };
+        });
+
+        const finalPerPage = perPage.map(entry => {
+            const st = sectionState.get(entry.rule);
+            const secTotal = skipUnprinted ? Math.max(st.printableCount, 1) : Math.max(st.allCount, 1);
+            return {
+                num: entry.num,
+                total: secTotal,
+                type: entry.rule.type,
+                format: entry.rule.format
+            };
+        });
+
+        const numbers = finalPerPage.map(p => p.num);
+        const total = Math.max(cards.length, 1);
+        return { numbers, total, perPage: finalPerPage };
     }
 
     function updatePreviewNumbers() {
         const isMasterEnabled = document.getElementById('master-num-toggle').checked;
-        const type = document.getElementById('num-type').value;
-        const format = document.getElementById('num-format').value || '{n}';
         const posType = document.getElementById('num-pos').value;
         const startNum = Math.max(1, parseInt(document.getElementById('start-num').value) || 1); 
         
@@ -1267,7 +1626,7 @@
         const ox = (parseInt(document.getElementById('offset-x').value) || 0) * 0.3;
         const oy = (parseInt(document.getElementById('offset-y').value) || 0) * 0.3;
 
-        const { numbers, total } = calculatePageNumbers(startNum);
+        const { perPage } = calculatePageNumbers(startNum);
 
         Array.from(container.children).forEach((card, i) => {
             const preview = card.querySelector('.number-preview');
@@ -1280,8 +1639,8 @@
 
             preview.style.display = 'block';
             
-            const currentNumber = numbers[i] || (startNum + i);
-            preview.innerText = getFormattedNumberText(currentNumber, total, type, format);
+            const cfg = perPage[i];
+            preview.innerText = getFormattedNumberText(cfg.num, cfg.total, cfg.type, cfg.format);
             
             preview.style.fontWeight = isBold ? 'bold' : 'normal';
             preview.style.fontStyle = isItalic ? 'italic' : 'normal';
@@ -1311,6 +1670,17 @@
         return format.replace('{n}', str).replace('{total}', strTotal);
     }
 
+    function buildOutputFilename() {
+        const raw = (document.getElementById('export-filename').value || '').trim();
+        if (raw) {
+            const clean = raw.replace(/[\\/:*?"<>|]/g, '_');
+            return clean.toLowerCase().endsWith('.pdf') ? clean : `${clean}.pdf`;
+        }
+        const now = new Date();
+        const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+        return `PEO_PDF_${dateStr}.pdf`;
+    }
+
     // -------------------------------------------------------------
     // Export Final PDF with Numbering + Stamp + Watermark
     // -------------------------------------------------------------
@@ -1319,8 +1689,7 @@
             showAlert('กรุณาเลือกไฟล์ PDF หรือรูปภาพก่อนค่ะ!');
             return;
         }
-        loading.style.display = 'flex';
-        document.getElementById('loading-status').innerText = 'กำลังจัดเตรียมไฟล์ PDF...';
+        showLoading('กำลังจัดเตรียมไฟล์ PDF...', 5, true);
         
         try {
             const { PDFDocument, degrees, rgb } = PDFLib;
@@ -1331,15 +1700,13 @@
             const stampEnabled = document.getElementById('stamp-enable').checked;
             const wmEnabled = document.getElementById('wm-enable').checked;
             
-            // โหลดฟอนต์ภาษาไทยสำหรับรันเลข / ตรายาง / ลายน้ำ
-            document.getElementById('loading-status').innerText = 'กำลังโหลดฟอนต์สารบรรณ...';
+            setLoadingProgress(10, 'กำลังโหลดฟอนต์สารบรรณ...', true);
             const fontFileName = document.getElementById('font-style').value;
             const fontRes = await fetch('fonts/' + fontFileName);
             if (!fontRes.ok) throw new Error(`ไม่พบไฟล์ฟอนต์ ${fontFileName} ในระบบ (Error ${fontRes.status})`);
             const fontBytes = await fontRes.arrayBuffer();
             const font = await finalPdf.embedFont(fontBytes, { subset: true });
 
-            // โหลดฟอนต์หนาสำหรับตรายาง
             let fontBold = font;
             try {
                 const fbRes = await fetch('fonts/THSARABUNNEWBOLD.TTF');
@@ -1348,17 +1715,14 @@
                 }
             } catch (err) {}
 
-            const type = document.getElementById('num-type').value;
-            const format = document.getElementById('num-format').value || '{n}';
             const posType = document.getElementById('num-pos').value;
             const fSize = Math.max(6, Math.min(72, parseInt(document.getElementById('font-size').value) || 16));
             const startNum = Math.max(1, parseInt(document.getElementById('start-num').value) || 1);
             const ox = parseInt(document.getElementById('offset-x').value) || 0;
             const oy = parseInt(document.getElementById('offset-y').value) || 0;
 
-            const { numbers, total } = calculatePageNumbers(startNum);
+            const { perPage } = calculatePageNumbers(startNum);
 
-            // ข้อมูลสำหรับตรายางรับหนังสือ
             const stampDept = document.getElementById('stamp-dept').value || 'ศธจ.อุดรธานี';
             const stampNo = document.getElementById('stamp-no').value || '';
             const stampDate = document.getElementById('stamp-date').value || '';
@@ -1366,12 +1730,11 @@
             const stampPageSetting = document.getElementById('stamp-page').value;
             const stampPosSetting = document.getElementById('stamp-pos').value;
 
-            // ข้อมูลสำหรับลายน้ำ
             const wmText = document.getElementById('wm-text').value.trim();
             const wmSize = parseInt(document.getElementById('wm-size').value) || 50;
             const wmAngleVal = parseInt(document.getElementById('wm-angle').value) || 45;
             const wmColorType = document.getElementById('wm-color').value;
-            let wmColorRgb = rgb(0.85, 0.2, 0.2); // red default
+            let wmColorRgb = rgb(0.85, 0.2, 0.2);
             if (wmColorType === 'gray') wmColorRgb = rgb(0.5, 0.5, 0.5);
             else if (wmColorType === 'blue') wmColorRgb = rgb(0.1, 0.3, 0.8);
 
@@ -1379,7 +1742,10 @@
             const cards = Array.from(container.children);
 
             for (let i = 0; i < cards.length; i++) {
-                document.getElementById('loading-status').innerText = `กำลังรวมหน้าที่ ${i + 1} จาก ${cards.length}...`;
+                if (isTaskCancelled) break;
+                const pct = 15 + Math.round(((i + 1) / cards.length) * 75);
+                setLoadingProgress(pct, `กำลังรวมหน้าที่ ${i + 1} จาก ${cards.length}...`, true);
+
                 const card = cards[i];
                 let src = docCache.get(card._pdfBytes);
                 if (!src) {
@@ -1414,7 +1780,8 @@
 
                 // 2) รันเลขหน้า
                 if (isMasterEnabled && card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked && font) {
-                    const text = getFormattedNumberText(numbers[i], total, type, format); 
+                    const cfg = perPage[i];
+                    const text = getFormattedNumberText(cfg.num, cfg.total, cfg.type, cfg.format); 
                     const tw = font.widthOfTextAtSize(text, fSize);
                     let margin = 40;
                     let tx, ty;
@@ -1443,7 +1810,6 @@
                     else if (totalRot === 180) { fbx = width - bx - boxW; fby = height - by - boxH; }
                     else if (totalRot === 270) { fbx = by; fby = height - bx - boxW; }
 
-                    // วาดกรอบตรายาง
                     page.drawRectangle({
                         x: fbx, y: fby, width: boxW, height: boxH,
                         borderWidth: 1.5,
@@ -1453,7 +1819,6 @@
                         rotate: degrees(totalRot)
                     });
 
-                    // เขียนข้อความในตรายาง
                     const lines = [
                         { text: stampDept, size: 12, bold: true, offY: 58 },
                         { text: `เลขรับ: ${stampNo || '........................'}`, size: 11, bold: false, offY: 42 },
@@ -1485,21 +1850,28 @@
                 finalPdf.addPage(page);
             }
 
-            document.getElementById('loading-status').innerText = 'กำลังสร้างไฟล์ PDF สำเร็จรูป...';
+            if (isTaskCancelled) {
+                showAlert('ยกเลิกการสร้างไฟล์ PDF เรียบร้อยแล้วค่ะ');
+                return;
+            }
+
+            if (document.getElementById('clean-metadata').checked) {
+                clearPdfMetadata(finalPdf);
+            }
+
+            setLoadingProgress(95, 'กำลังสร้างไฟล์ PDF สำเร็จรูป...', false);
             const pdfBytesOut = await finalPdf.save();
             const blob = new Blob([pdfBytesOut], { type: 'application/pdf' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            const now = new Date();
-            const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
-            a.download = `PEO_PDF_${dateStr}.pdf`;
+            a.download = buildOutputFilename();
             a.click();
             setTimeout(() => URL.revokeObjectURL(a.href), 15000);
         } catch(e) { 
             console.error(e); 
             showAlert(`เกิดข้อผิดพลาดในการประมวลผล:\n${e.message}`); 
         } finally {
-            loading.style.display = 'none';
+            hideLoading();
         }
     };
 
@@ -1509,8 +1881,8 @@
         const currentValue = fmt.value;
         
         const startNum = Math.max(1, parseInt(document.getElementById('start-num').value) || 1);
-        const { numbers, total } = calculatePageNumbers(startNum);
-        const endNum = numbers[numbers.length - 1] || (startNum + total - 1);
+        const totalPages = Math.max(container.children.length, 1);
+        const endNum = startNum + totalPages - 1;
         
         let p = startNum.toString();
         let t = endNum.toString(); 
@@ -1540,15 +1912,17 @@
     }
 
     async function zoomCard(card) {
-        loading.style.display = 'flex';
-        document.getElementById('loading-status').innerText = 'กำลังโหลดภาพขยาย...';
+        showLoading('กำลังโหลดภาพขยาย...', 40, false);
         try {
             const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(card._pdfBytes) }).promise;
             const page = await pdf.getPage(card._originalIdx + 1);
-            const viewport = page.getViewport({ scale: 1.5 });
+            const rot = (page.rotate + parseInt(card.dataset.rotation || 0)) % 360;
+            const viewport = page.getViewport({ scale: 1.5, rotation: rot });
             const zCanvas = document.getElementById('zoom-canvas');
             zCanvas.width = viewport.width; zCanvas.height = viewport.height;
             await page.render({ canvasContext: zCanvas.getContext('2d'), viewport }).promise;
+            if (typeof pdf.destroy === 'function') pdf.destroy().catch(() => {});
+
             const zoomPreview = document.getElementById('zoom-number-preview');
             const isMasterEnabled = document.getElementById('master-num-toggle').checked;
             const isPrint = card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked;
@@ -1556,8 +1930,6 @@
             if (!isPreviewOpen || !isPrint || !isMasterEnabled) {
                 zoomPreview.style.display = 'none';
             } else {
-                const type = document.getElementById('num-type').value;
-                const format = document.getElementById('num-format').value || '{n}';
                 const posType = document.getElementById('num-pos').value;
                 const fontStyleFile = document.getElementById('font-style').value;
                 const isBold = fontStyleFile.includes('BOLD');
@@ -1569,10 +1941,10 @@
                 
                 const startNum = Math.max(1, parseInt(document.getElementById('start-num').value) || 1); 
                 const pageIndex = Array.from(container.children).indexOf(card);
-                const { numbers, total } = calculatePageNumbers(startNum);
-                const curNum = numbers[pageIndex] || (startNum + pageIndex);
+                const { perPage } = calculatePageNumbers(startNum);
+                const cfg = perPage[pageIndex];
                 
-                zoomPreview.innerText = getFormattedNumberText(curNum, total, type, format);
+                zoomPreview.innerText = getFormattedNumberText(cfg.num, cfg.total, cfg.type, cfg.format);
                 zoomPreview.style.fontWeight = isBold ? 'bold' : 'normal';
                 zoomPreview.style.fontStyle = isItalic ? 'italic' : 'normal';
                 zoomPreview.style.fontSize = (baseFontSize * 1.5) + 'px'; 
@@ -1590,9 +1962,63 @@
             console.error(e);
             showAlert(`เกิดข้อผิดพลาดในการขยายภาพ:\n${e.message}`);
         } finally {
-            loading.style.display = 'none';
+            hideLoading();
         }
     }
+
+    // -------------------------------------------------------------
+    // Keyboard Shortcuts
+    // -------------------------------------------------------------
+    document.addEventListener('keydown', (e) => {
+        const tag = (e.target && e.target.tagName) ? e.target.tagName.toUpperCase() : '';
+        const isTyping = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag);
+
+        if (e.key === 'Escape') {
+            if (document.getElementById('zoom-modal').style.display === 'flex') {
+                document.getElementById('zoom-modal').style.display = 'none';
+                return;
+            }
+            if (document.getElementById('manual-modal').style.display === 'flex') {
+                closeManualModal();
+                return;
+            }
+            if (document.getElementById('alert-modal').style.display === 'flex') {
+                closeAlert(false);
+                return;
+            }
+            selectAllCards(false);
+            return;
+        }
+
+        if (isTyping) return;
+
+        const ctrl = e.ctrlKey || e.metaKey;
+        if (ctrl && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+            e.preventDefault();
+            document.getElementById('btn-undo').click();
+        } else if ((ctrl && e.key.toLowerCase() === 'y') || (ctrl && e.shiftKey && e.key.toLowerCase() === 'z')) {
+            e.preventDefault();
+            document.getElementById('btn-redo').click();
+        } else if (ctrl && e.key.toLowerCase() === 's') {
+            e.preventDefault();
+            document.getElementById('btn-export').click();
+        } else if (ctrl && e.key.toLowerCase() === 'a') {
+            if (container.children.length) {
+                e.preventDefault();
+                selectAllCards(true);
+            }
+        } else if (e.key === 'Delete' || e.key === 'Backspace') {
+            if (getSelectedCards().length) {
+                e.preventDefault();
+                batchDelete();
+            }
+        } else if (!ctrl && e.key.toLowerCase() === 'r') {
+            if (getSelectedCards().length) {
+                e.preventDefault();
+                batchRotate(90);
+            }
+        }
+    });
 
     window.onload = () => { 
         updateFormatOptions(); 
