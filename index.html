@@ -72,10 +72,8 @@
         [data-theme="dark"] .page-card.selected { box-shadow: 0 0 0 3px rgba(55, 147, 255, 0.35); background: rgba(55, 147, 255, 0.08); }
         .page-card.blank-card { border-style: dashed; background: rgba(0, 86, 179, 0.03); }
         .canvas-wrapper { width: 100%; aspect-ratio: 1 / 1.4; background: #f8f9fa; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 4px; position: relative; }
-        .page-card canvas { max-width: 100%; max-height: 100%; transition: transform 0.3s; }
-        .page-card.rot-landscape .stamp-preview { top: 18% !important; }
-        .page-card.rot-landscape .number-preview[data-pos^="T"] { top: 18% !important; }
-        .page-card.rot-landscape .number-preview[data-pos^="B"] { bottom: 18% !important; }
+        .page-box { position: relative; overflow: hidden; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+        .page-box canvas { position: absolute; top: 50%; left: 50%; max-width: none; max-height: none; transition: transform 0.3s; display: block; }
         
         .number-preview { position: absolute; color: #000000 !important; background: rgba(255, 255, 255, 0.92) !important; border: 1px dashed #000000 !important; padding: 2px 4px; font-size: 11px; pointer-events: none; display: none; z-index: 20; white-space: nowrap; line-height: 1.1; }
         #zoom-number-preview { background: transparent !important; border: 1px dashed rgba(0, 0, 0, 0.5) !important; padding: 0; }
@@ -83,7 +81,7 @@
         .stamp-preview .sp-dept { font-weight: bold; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 1px; }
         .stamp-preview .sp-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .watermark-preview { position: absolute; top: 50%; left: 50%; display: none; pointer-events: none; z-index: 15; font-weight: bold; white-space: nowrap; opacity: 0.25; text-align: center; user-select: none; }
-        .zoom-stage { position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .zoom-stage { position: relative; display: inline-block; overflow: hidden; max-width: 100%; max-height: calc(95vh - 20px); }
         #zoom-stamp-preview { border-width: 2px; padding: 6px 10px; font-size: 15px; line-height: 1.35; border-radius: 3px; }
         .page-info { position: absolute; top: 4px; left: 4px; background: rgba(0,0,0,0.72); color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; z-index: 10; }
         .card-select-wrap { position: absolute; top: 4px; right: 4px; z-index: 15; background: rgba(255,255,255,0.92); border-radius: 4px; padding: 2px; display: flex; align-items: center; justify-content: center; border: 1px solid #ccc; cursor: pointer; }
@@ -113,7 +111,7 @@
         #zoom-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; justify-content: center; align-items: center; padding: 20px; }
         #zoom-content { background: var(--card-bg); padding: 10px; border-radius: 8px; position: relative; max-width: 95vw; max-height: 95vh; display: flex; flex-direction: column; border: 1px solid var(--border); overflow: hidden; }
         .close-modal { position: absolute; top: -15px; right: -15px; background: #dc3545; color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-weight: bold; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; z-index: 100; }
-        #zoom-canvas { max-width: 100%; max-height: calc(95vh - 20px); object-fit: contain; }
+        #zoom-canvas { display: block; max-width: 100%; max-height: calc(95vh - 20px); width: auto; height: auto; }
         
         #loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--loading-bg); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 2000; flex-direction: column; }
         .theme-switch { background: var(--card-bg); color: var(--text); border: 1px solid var(--border); padding: 5px 12px; border-radius: 50px; cursor: pointer; font-weight: 600; font-size: 12px; height: 30px; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
@@ -406,7 +404,7 @@
                     <p style="font-size:11.5px; color:#666; margin:0 0 8px 0;">รองรับไฟล์ JPG / PNG แทรกเข้าชุดเอกสารและรันเลขหน้าได้ทันที</p>
                     <label class="btn btn-info" style="display:inline-flex; width:fit-content; cursor:pointer; height:28px; font-size:12px;">
                         📷 เลือกรูปภาพแทรก...
-                        <input type="file" id="image-upload" accept="image/png,image/jpeg,image/jpg" multiple style="display:none;" onchange="handleImageUpload(this.files)">
+                        <input type="file" id="image-upload" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif" multiple style="display:none;" onchange="handleImageUpload(this.files)">
                     </label>
                 </div>
 
@@ -1330,9 +1328,7 @@
         selected.forEach(card => {
             const rot = (((parseInt(card.dataset.rotation || 0) + deg) % 360) + 360) % 360;
             card.dataset.rotation = rot;
-            card.classList.toggle('rot-landscape', rot === 90 || rot === 270);
-            const canvas = card.querySelector('canvas');
-            if (canvas) canvas.style.transform = `rotate(${rot}deg)`;
+            syncCardStage(card);
         });
         saveHistory();
         if (isPreviewOpen) updatePreviewNumbers();
@@ -1416,9 +1412,7 @@
             const card = item.card;
             setCardSelected(card, false);
             card.dataset.rotation = item.rotation;
-            card.classList.toggle('rot-landscape', item.rotation === 90 || item.rotation === 270);
-            const canvas = card.querySelector('canvas');
-            if (canvas) canvas.style.transform = `rotate(${item.rotation}deg)`;
+            syncCardStage(card);
             
             const togglePrint = card.querySelector('.toggle-print');
             const lbl = card.querySelector('.toggle-print-label');
@@ -1463,20 +1457,25 @@
         try {
             const fileArr = Array.from(files);
             let addedAny = false;
+            const failedFiles = [];
 
             for (let fIdx = 0; fIdx < fileArr.length; fIdx++) {
                 if (isTaskCancelled) break;
                 const file = fileArr[fIdx];
                 const lowerName = file.name.toLowerCase();
-                const isImage = file.type.startsWith('image/') || /\.(png|jpe?g)$/i.test(lowerName);
+                const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp|gif)$/i.test(lowerName);
                 const sourceColor = FILE_COLORS[fileColorCounter++ % FILE_COLORS.length];
 
                 if (isImage) {
-                    const card = await createCardFromImageFile(file, sourceColor);
-                    if (card) {
-                        insertCardsAtTarget([card]);
-                        suggestExportFilename(file.name);
-                        addedAny = true;
+                    try {
+                        const card = await createCardFromImageFile(file, sourceColor);
+                        if (card) {
+                            insertCardsAtTarget([card]);
+                            suggestExportFilename(file.name);
+                            addedAny = true;
+                        }
+                    } catch (imgErr) {
+                        failedFiles.push(`${file.name}: ${imgErr.message}`);
                     }
                     continue;
                 }
@@ -1532,6 +1531,9 @@
                 updateAllBadges();
                 saveHistory();
             }
+            if (failedFiles.length) {
+                showAlert(`ไม่สามารถนำเข้าบางไฟล์ได้ (${failedFiles.length} ไฟล์):\n\n• ${failedFiles.join('\n• ')}`);
+            }
             if (isTaskCancelled) {
                 showAlert('ยกเลิกการนำเข้าไฟล์เรียบร้อยแล้วค่ะ');
             }
@@ -1555,7 +1557,39 @@
         }
     }
 
+    function getCardVisualSizePt(card) {
+        const rot = (((parseInt(card.dataset.rotation || 0)) % 360) + 360) % 360;
+        const bw = card._baseW || 595.28;
+        const bh = card._baseH || 841.89;
+        return (rot === 90 || rot === 270) ? { vW: bh, vH: bw, rot } : { vW: bw, vH: bh, rot };
+    }
+
+    function syncCardStage(card) {
+        const box = card.querySelector('.page-box');
+        const canvas = box ? box.querySelector('canvas') : null;
+        if (!box || !canvas) return;
+        const { vW, vH, rot } = getCardVisualSizePt(card);
+        const rPage = vW / vH;
+        const rWrap = 1 / 1.4;
+        if (rPage >= rWrap) {
+            box.style.width = '100%';
+            box.style.height = ((1 / (1.4 * rPage)) * 100).toFixed(4) + '%';
+        } else {
+            box.style.height = '100%';
+            box.style.width = ((1.4 * rPage) * 100).toFixed(4) + '%';
+        }
+        if (rot === 90 || rot === 270) {
+            canvas.style.width = (100 / rPage).toFixed(4) + '%';
+            canvas.style.height = (100 * rPage).toFixed(4) + '%';
+        } else {
+            canvas.style.width = '100%';
+            canvas.style.height = '100%';
+        }
+        canvas.style.transform = `translate(-50%, -50%) rotate(${rot}deg)`;
+    }
+
     async function createPageCard(page, pageNum, pdfBytes, sourceMeta = { fileName: 'เอกสาร', color: '#0056b3', customTag: '' }) {
+        const baseVp = page.getViewport({ scale: 1 });
         const viewport = page.getViewport({ scale: 0.3 });
         const canvas = document.createElement('canvas');
         canvas.width = viewport.width; canvas.height = viewport.height;
@@ -1566,6 +1600,8 @@
         card.dataset.rotation = 0;
         card._pdfBytes = pdfBytes; 
         card._originalIdx = pageNum - 1;
+        card._baseW = baseVp.width;
+        card._baseH = baseVp.height;
         card._sourceFile = sourceMeta.fileName || 'เอกสาร';
         card._sourceColor = sourceMeta.color || '#0056b3';
 
@@ -1582,9 +1618,11 @@
                 <input type="checkbox" class="card-select-cb">
             </label>
             <div class="canvas-wrapper">
-                <div class="watermark-preview"></div>
-                <div class="stamp-preview"></div>
-                <div class="number-preview"></div>
+                <div class="page-box">
+                    <div class="watermark-preview"></div>
+                    <div class="stamp-preview"></div>
+                    <div class="number-preview"></div>
+                </div>
             </div>
             <div class="file-source-tag" style="border-left-color: ${card._sourceColor};" title="${escapeHtml(tagLabel)}">${escapeHtml(tagLabel)}</div>
             <div class="controls">
@@ -1627,7 +1665,8 @@
             }
         });
 
-        card.querySelector('.canvas-wrapper').prepend(canvas);
+        card.querySelector('.page-box').prepend(canvas);
+        syncCardStage(card);
         return card;
     }
 
@@ -1728,17 +1767,25 @@
             const arr = Array.from(files);
             const color = FILE_COLORS[fileColorCounter++ % FILE_COLORS.length];
             const newCards = [];
+            const failedFiles = [];
             for (let i = 0; i < arr.length; i++) {
                 if (isTaskCancelled) break;
                 setLoadingProgress(Math.round(((i + 1) / arr.length) * 100), `กำลังแปลงรูปที่ ${i + 1}/${arr.length}...`, true);
-                const c = await createCardFromImageFile(arr[i], color);
-                if (c) newCards.push(c);
+                try {
+                    const c = await createCardFromImageFile(arr[i], color);
+                    if (c) newCards.push(c);
+                } catch (err) {
+                    failedFiles.push(`${arr[i].name}: ${err.message}`);
+                }
             }
             if (!isTaskCancelled && newCards.length) {
                 insertCardsAtTarget(newCards);
                 suggestExportFilename(arr[0].name);
                 updateAllBadges();
                 saveHistory();
+            }
+            if (failedFiles.length) {
+                showAlert(`ไม่สามารถนำเข้าบางรูปภาพได้ (${failedFiles.length} ไฟล์):\n\n• ${failedFiles.join('\n• ')}`);
             }
         } catch (e) {
             console.error(e);
@@ -1749,61 +1796,139 @@
         }
     }
 
+    function getJpegExifOrientation(buffer) {
+        const view = new DataView(buffer);
+        if (view.byteLength < 12 || view.getUint16(0, false) !== 0xFFD8) return 1;
+        let offset = 2;
+        while (offset + 4 < view.byteLength) {
+            const marker = view.getUint16(offset, false);
+            offset += 2;
+            if (marker === 0xFFE1) {
+                if (view.getUint32(offset + 2, false) !== 0x45786966) break;
+                const little = view.getUint16(offset + 8, false) === 0x4949;
+                const tiffStart = offset + 8;
+                const firstIfd = view.getUint32(tiffStart + 4, little);
+                const dirStart = tiffStart + firstIfd;
+                if (dirStart + 2 > view.byteLength) break;
+                const entries = view.getUint16(dirStart, little);
+                for (let i = 0; i < entries; i++) {
+                    const entryOffset = dirStart + 2 + i * 12;
+                    if (entryOffset + 12 > view.byteLength) break;
+                    if (view.getUint16(entryOffset, little) === 0x0112) {
+                        return view.getUint16(entryOffset + 8, little);
+                    }
+                }
+                break;
+            } else if ((marker & 0xFF00) !== 0xFF00) {
+                break;
+            } else {
+                offset += view.getUint16(offset, false);
+            }
+        }
+        return 1;
+    }
+
+    async function loadDrawableImage(file) {
+        if (typeof createImageBitmap === 'function') {
+            try {
+                const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+                return { drawable: bmp, width: bmp.width, height: bmp.height, cleanup: () => bmp.close() };
+            } catch (_) {
+                // Fallback to <img> if imageOrientation option or format fails
+            }
+        }
+        const objectUrl = URL.createObjectURL(file);
+        try {
+            const img = await new Promise((resolve, reject) => {
+                const el = new Image();
+                el.onload = () => resolve(el);
+                el.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์รูปภาพนี้ได้'));
+                el.src = objectUrl;
+            });
+            return {
+                drawable: img,
+                width: img.naturalWidth || img.width,
+                height: img.naturalHeight || img.height,
+                cleanup: () => URL.revokeObjectURL(objectUrl)
+            };
+        } catch (err) {
+            URL.revokeObjectURL(objectUrl);
+            throw err;
+        }
+    }
+
     async function normalizeImageForPdf(file) {
         const lowerName = file.name.toLowerCase();
+        const isJpeg = file.type === 'image/jpeg' || /\.(jpe?g)$/i.test(lowerName);
         const preferPng = file.type === 'image/png' || file.type === 'image/webp' || file.type === 'image/gif' || /\.(png|webp|gif)$/i.test(lowerName);
-        const targetMime = preferPng ? 'image/png' : 'image/jpeg';
 
-        let drawable = null;
-        let width = 0;
-        let height = 0;
-        let objectUrl = null;
-
-        try {
-            if (typeof createImageBitmap === 'function') {
-                drawable = await createImageBitmap(file, { imageOrientation: 'from-image' });
-                width = drawable.width;
-                height = drawable.height;
-            } else {
-                objectUrl = URL.createObjectURL(file);
-                drawable = await new Promise((resolve, reject) => {
-                    const img = new Image();
-                    img.onload = () => resolve(img);
-                    img.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์รูปภาพนี้ได้'));
-                    img.src = objectUrl;
-                });
-                width = drawable.naturalWidth || drawable.width;
-                height = drawable.naturalHeight || drawable.height;
+        if (isJpeg && file.size <= 12 * 1024 * 1024) {
+            const rawBytes = new Uint8Array(await file.arrayBuffer());
+            if (getJpegExifOrientation(rawBytes.buffer) === 1) {
+                return { bytes: rawBytes, isPng: false, passthrough: true };
             }
+        }
+
+        const targetMime = preferPng ? 'image/png' : 'image/jpeg';
+        const loaded = await loadDrawableImage(file);
+        try {
+            const MAX_DIM = 2480;
+            let { width, height } = loaded;
+            const scale = Math.min(1, MAX_DIM / Math.max(width, height));
+            const outW = Math.max(1, Math.round(width * scale));
+            const outH = Math.max(1, Math.round(height * scale));
 
             const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
+            canvas.width = outW;
+            canvas.height = outH;
             const ctx = canvas.getContext('2d');
             if (!preferPng) {
                 ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, width, height);
+                ctx.fillRect(0, 0, outW, outH);
             }
-            ctx.drawImage(drawable, 0, 0, width, height);
+            ctx.drawImage(loaded.drawable, 0, 0, outW, outH);
 
             const blob = await new Promise((resolve, reject) => {
                 canvas.toBlob(b => b ? resolve(b) : reject(new Error('แปลงไฟล์รูปภาพไม่สำเร็จ')), targetMime, 0.92);
             });
-            return { bytes: new Uint8Array(await blob.arrayBuffer()), isPng: preferPng };
+            return { bytes: new Uint8Array(await blob.arrayBuffer()), isPng: preferPng, passthrough: false };
         } finally {
-            if (drawable && typeof drawable.close === 'function') drawable.close();
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            loaded.cleanup();
         }
     }
 
     async function createCardFromImageFile(file, color) {
         const { PDFDocument } = PDFLib;
         const doc = await PDFDocument.create();
-        const { bytes: imgBytes, isPng } = await normalizeImageForPdf(file);
+        const norm = await normalizeImageForPdf(file);
 
-        const embeddedImg = isPng
-            ? await doc.embedPng(imgBytes)
-            : await doc.embedJpg(imgBytes);
+        let embeddedImg;
+        try {
+            embeddedImg = norm.isPng
+                ? await doc.embedPng(norm.bytes)
+                : await doc.embedJpg(norm.bytes);
+        } catch (err) {
+            if (norm.passthrough) {
+                const fallbackLoaded = await loadDrawableImage(file);
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.min(2480, fallbackLoaded.width);
+                    canvas.height = Math.round(fallbackLoaded.height * (canvas.width / fallbackLoaded.width));
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    ctx.drawImage(fallbackLoaded.drawable, 0, 0, canvas.width, canvas.height);
+                    const blob = await new Promise((resolve, reject) => {
+                        canvas.toBlob(b => b ? resolve(b) : reject(new Error('แปลงไฟล์รูปภาพไม่สำเร็จ')), 'image/jpeg', 0.92);
+                    });
+                    embeddedImg = await doc.embedJpg(new Uint8Array(await blob.arrayBuffer()));
+                } finally {
+                    fallbackLoaded.cleanup();
+                }
+            } else {
+                throw err;
+            }
+        }
 
         const pageW = 595.28;
         const pageH = 841.89;
@@ -1925,9 +2050,7 @@
     function rotateCard(card) {
         const rot = (((parseInt(card.dataset.rotation || 0) + 90) % 360) + 360) % 360;
         card.dataset.rotation = rot;
-        card.classList.toggle('rot-landscape', rot === 90 || rot === 270);
-        const canvas = card.querySelector('canvas');
-        if (canvas) canvas.style.transform = `rotate(${rot}deg)`;
+        syncCardStage(card);
         saveHistory();
         if(isPreviewOpen) updatePreviewNumbers();
         updateAllOverlays();
@@ -2120,7 +2243,7 @@
         return { numbers, total, perPage: finalPerPage };
     }
 
-    function applyStampOverlay(el, pageIndex, isZoom = false) {
+    function applyStampOverlay(el, pageIndex, vW = 595.28, vH = 841.89, zoomScale = 0) {
         if (!el) return;
         const stampEnabled = document.getElementById('stamp-enable').checked;
         const stampPageSetting = document.getElementById('stamp-page').value;
@@ -2135,7 +2258,10 @@
         const stampDate = formatStampDigits(document.getElementById('stamp-date').value || '........', stampUseThai);
         const stampTime = formatStampDigits(document.getElementById('stamp-time').value || '........', stampUseThai);
         const stampPos = document.getElementById('stamp-pos').value;
-        const margin = isZoom ? '36px' : '7px';
+
+        const marginPt = Math.min(25, Math.max(8, (vW - 165) / 2));
+        const topPct = ((25 / vH) * 100).toFixed(2) + '%';
+        const sidePct = ((marginPt / vW) * 100).toFixed(2) + '%';
 
         el.innerHTML = `
             <div class="sp-dept">${escapeHtml(stampDept)}</div>
@@ -2143,13 +2269,17 @@
             <div class="sp-line">วันที่: ${escapeHtml(stampDate)}</div>
             <div class="sp-line">เวลา: ${escapeHtml(stampTime)}</div>
         `;
-        el.style.top = margin;
-        el.style.left = stampPos === 'TL' ? margin : 'auto';
-        el.style.right = stampPos === 'TR' ? margin : 'auto';
+        if (zoomScale > 0) {
+            el.style.fontSize = Math.max(9, Math.round(11 * zoomScale)) + 'px';
+            el.style.padding = Math.max(3, Math.round(4 * zoomScale)) + 'px ' + Math.max(5, Math.round(7 * zoomScale)) + 'px';
+        }
+        el.style.top = topPct;
+        el.style.left = stampPos === 'TL' ? sidePct : 'auto';
+        el.style.right = stampPos === 'TR' ? sidePct : 'auto';
         el.style.display = 'block';
     }
 
-    function applyWatermarkOverlay(el, isZoom = false) {
+    function applyWatermarkOverlay(el, zoomScale = 0) {
         if (!el) return;
         const wmEnabled = document.getElementById('wm-enable').checked;
         const wmText = (document.getElementById('wm-text').value || '').trim();
@@ -2166,7 +2296,7 @@
 
         el.innerText = wmText;
         el.style.color = colorCss;
-        el.style.fontSize = (isZoom ? Math.round(wmSize * 1.35) : Math.max(8, Math.round(wmSize * 0.28))) + 'px';
+        el.style.fontSize = (zoomScale > 0 ? Math.max(12, Math.round(wmSize * zoomScale)) : Math.max(8, Math.round(wmSize * 0.28))) + 'px';
         // PDF-lib positive angle rotates counter-clockwise; CSS positive angle rotates clockwise
         el.style.transform = `translate(-50%, -50%) rotate(${-wmAngle}deg)`;
         el.style.display = 'block';
@@ -2174,8 +2304,9 @@
 
     function updateAllOverlays() {
         Array.from(container.children).forEach((card, i) => {
-            applyStampOverlay(card.querySelector('.stamp-preview'), i, false);
-            applyWatermarkOverlay(card.querySelector('.watermark-preview'), false);
+            const { vW, vH } = getCardVisualSizePt(card);
+            applyStampOverlay(card.querySelector('.stamp-preview'), i, vW, vH, 0);
+            applyWatermarkOverlay(card.querySelector('.watermark-preview'), 0);
         });
     }
 
@@ -2189,8 +2320,8 @@
         const isItalic = fontStyleFile.includes('ITALIC');
         const baseFontSize = Math.max(8, parseInt(document.getElementById('font-size').value) || 16);
         
-        const ox = (parseInt(document.getElementById('offset-x').value) || 0) * 0.3;
-        const oy = (parseInt(document.getElementById('offset-y').value) || 0) * 0.3;
+        const ox = parseInt(document.getElementById('offset-x').value) || 0;
+        const oy = parseInt(document.getElementById('offset-y').value) || 0;
 
         const { perPage } = calculatePageNumbers(startNum);
 
@@ -2203,20 +2334,27 @@
                 return; 
             }
 
+            const { vW, vH } = getCardVisualSizePt(card);
+            const margin = 40;
             preview.style.display = 'block';
             preview.innerText = getFormattedNumberText(cfg.num, cfg.total, cfg.type, cfg.format);
             
             preview.style.fontWeight = isBold ? 'bold' : 'normal';
             preview.style.fontStyle = isItalic ? 'italic' : 'normal';
-            preview.style.fontSize = Math.max(9, Math.round(baseFontSize * 0.35)) + 'px';
+            preview.style.fontSize = Math.max(8, Math.round(baseFontSize * 0.35)) + 'px';
 
             preview.dataset.pos = posType;
             preview.style.top = 'auto'; preview.style.bottom = 'auto'; preview.style.left = 'auto'; preview.style.right = 'auto'; preview.style.transform = 'none';
 
-            if(posType === 'TR') { preview.style.top = (10 - oy)+'px'; preview.style.right = (10 - ox)+'px'; }
-            else if(posType === 'TC') { preview.style.top = (10 - oy)+'px'; preview.style.left = '50%'; preview.style.transform = `translateX(calc(-50% + ${ox}px))`; }
-            else if(posType === 'BR') { preview.style.bottom = (10 + oy)+'px'; preview.style.right = (10 - ox)+'px'; }
-            else if(posType === 'BC') { preview.style.bottom = (10 + oy)+'px'; preview.style.left = '50%'; preview.style.transform = `translateX(calc(-50% + ${ox}px))`; }
+            const topPct = (((margin - oy) / vH) * 100).toFixed(2) + '%';
+            const bottomPct = (((margin + oy) / vH) * 100).toFixed(2) + '%';
+            const rightPct = (((margin - ox) / vW) * 100).toFixed(2) + '%';
+            const leftCenterPct = (50 + (ox / vW) * 100).toFixed(2) + '%';
+
+            if(posType === 'TR') { preview.style.top = topPct; preview.style.right = rightPct; }
+            else if(posType === 'TC') { preview.style.top = topPct; preview.style.left = leftCenterPct; preview.style.transform = 'translateX(-50%)'; }
+            else if(posType === 'BR') { preview.style.bottom = bottomPct; preview.style.right = rightPct; }
+            else if(posType === 'BC') { preview.style.bottom = bottomPct; preview.style.left = leftCenterPct; preview.style.transform = 'translateX(-50%)'; }
         });
     }
 
@@ -2503,11 +2641,16 @@
             const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(card._pdfBytes) }).promise;
             const page = await pdf.getPage(card._originalIdx + 1);
             const rot = (page.rotate + parseInt(card.dataset.rotation || 0)) % 360;
+            const ptVp = page.getViewport({ scale: 1, rotation: rot });
             const viewport = page.getViewport({ scale: 1.5, rotation: rot });
             const zCanvas = document.getElementById('zoom-canvas');
             zCanvas.width = viewport.width; zCanvas.height = viewport.height;
             await page.render({ canvasContext: zCanvas.getContext('2d'), viewport }).promise;
             if (typeof pdf.destroy === 'function') pdf.destroy().catch(() => {});
+
+            const maxAvailW = Math.max(200, window.innerWidth * 0.95 - 60);
+            const maxAvailH = Math.max(200, window.innerHeight * 0.95 - 40);
+            const displayScale = Math.min(viewport.width / ptVp.width, maxAvailW / ptVp.width, maxAvailH / ptVp.height);
 
             const zoomPreview = document.getElementById('zoom-number-preview');
             const isMasterEnabled = document.getElementById('master-num-toggle').checked;
@@ -2516,8 +2659,8 @@
             const { perPage } = calculatePageNumbers(startNum);
             const cfg = perPage[pageIndex];
 
-            applyWatermarkOverlay(document.getElementById('zoom-watermark-preview'), true);
-            applyStampOverlay(document.getElementById('zoom-stamp-preview'), pageIndex, true);
+            applyWatermarkOverlay(document.getElementById('zoom-watermark-preview'), displayScale);
+            applyStampOverlay(document.getElementById('zoom-stamp-preview'), pageIndex, ptVp.width, ptVp.height, displayScale);
             
             if (!isPreviewOpen || !isMasterEnabled || !cfg || !cfg.shouldPrint) {
                 zoomPreview.style.display = 'none';
@@ -2526,21 +2669,26 @@
                 const fontStyleFile = document.getElementById('font-style').value;
                 const isBold = fontStyleFile.includes('BOLD');
                 const isItalic = fontStyleFile.includes('ITALIC');
-                const ox = (parseInt(document.getElementById('offset-x').value) || 0) * 1.5;
-                const oy = (parseInt(document.getElementById('offset-y').value) || 0) * 1.5;
+                const ox = parseInt(document.getElementById('offset-x').value) || 0;
+                const oy = parseInt(document.getElementById('offset-y').value) || 0;
                 const baseFontSize = parseInt(document.getElementById('font-size').value) || 16;
-                const paddingEdge = 60; 
+                const margin = 40;
                 
                 zoomPreview.innerText = getFormattedNumberText(cfg.num, cfg.total, cfg.type, cfg.format);
                 zoomPreview.style.fontWeight = isBold ? 'bold' : 'normal';
                 zoomPreview.style.fontStyle = isItalic ? 'italic' : 'normal';
-                zoomPreview.style.fontSize = (baseFontSize * 1.5) + 'px'; 
+                zoomPreview.style.fontSize = Math.max(10, Math.round(baseFontSize * displayScale)) + 'px'; 
                 
                 zoomPreview.style.top = 'auto'; zoomPreview.style.bottom = 'auto'; zoomPreview.style.left = 'auto'; zoomPreview.style.right = 'auto'; zoomPreview.style.transform = 'none';
-                if(posType === 'TR') { zoomPreview.style.top = (paddingEdge - oy)+'px'; zoomPreview.style.right = (paddingEdge - ox)+'px'; }
-                else if(posType === 'TC') { zoomPreview.style.top = (paddingEdge - oy)+'px'; zoomPreview.style.left = '50%'; zoomPreview.style.transform = `translateX(calc(-50% + ${ox}px))`; }
-                else if(posType === 'BR') { zoomPreview.style.bottom = (paddingEdge + oy)+'px'; zoomPreview.style.right = (paddingEdge - ox)+'px'; }
-                else if(posType === 'BC') { zoomPreview.style.bottom = (paddingEdge + oy)+'px'; zoomPreview.style.left = '50%'; zoomPreview.style.transform = `translateX(calc(-50% + ${ox}px))`; }
+                const topPct = (((margin - oy) / ptVp.height) * 100).toFixed(2) + '%';
+                const bottomPct = (((margin + oy) / ptVp.height) * 100).toFixed(2) + '%';
+                const rightPct = (((margin - ox) / ptVp.width) * 100).toFixed(2) + '%';
+                const leftCenterPct = (50 + (ox / ptVp.width) * 100).toFixed(2) + '%';
+
+                if(posType === 'TR') { zoomPreview.style.top = topPct; zoomPreview.style.right = rightPct; }
+                else if(posType === 'TC') { zoomPreview.style.top = topPct; zoomPreview.style.left = leftCenterPct; zoomPreview.style.transform = 'translateX(-50%)'; }
+                else if(posType === 'BR') { zoomPreview.style.bottom = bottomPct; zoomPreview.style.right = rightPct; }
+                else if(posType === 'BC') { zoomPreview.style.bottom = bottomPct; zoomPreview.style.left = leftCenterPct; zoomPreview.style.transform = 'translateX(-50%)'; }
                 
                 zoomPreview.style.display = 'block';
             }
