@@ -16,7 +16,7 @@
     <script src="lib/pdf-lib.min.js"></script>
     <script src="lib/fontkit.umd.js"></script>
     <script src="lib/Sortable.min.js"></script>
-    <script src="core/peo-pdf-core.js"></script>
+    <script src="core/peo-pdf-core.js?v=1.7.0"></script>
 
     <style>
         :root { 
@@ -173,7 +173,7 @@
     <div class="header-brand">
         <img src="img/logo.png" alt="PEO Udon Logo" class="system-logo" onerror="this.style.display='none'">
         <h1 class="system-title">Udon Thani Provincial Education Office PDF Helper</h1>
-        <span style="font-size:11px; background:var(--success); color:white; padding:3px 10px; border-radius:12px; font-weight:bold;">v1.6.0 Offline + สารบรรณ</span>
+        <span id="app-version-badge" style="font-size:11px; background:var(--success); color:white; padding:3px 10px; border-radius:12px; font-weight:bold;">v1.7.0 Core SDK + สารบรรณ</span>
     </div>
     <div class="header-actions">
         <button type="button" class="btn btn-secondary" style="font-size:12px; height:30px; padding:2px 10px;" onclick="openSettingsModal()">⚙️ ตั้งค่าระบบ</button>
@@ -1247,9 +1247,15 @@
         syncStampNumberUI(false);
         setDefaultStampValues();
 
+        // Sync badge version from Core SDK
+        const verBadge = document.getElementById('app-version-badge');
+        if (verBadge && window.PeoPdfCore && PeoPdfCore.VERSION) {
+            verBadge.innerText = `v${PeoPdfCore.VERSION} Core SDK + สารบรรณ`;
+        }
+
         // Register Offline Service Worker (PWA)
         if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.protocol === 'http:')) {
-            navigator.serviceWorker.register('./sw.js').catch(() => {});
+            navigator.serviceWorker.register('./sw.js').then(reg => reg.update()).catch(() => {});
         }
     });
 

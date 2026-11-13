@@ -1,4 +1,4 @@
-const CACHE_NAME = 'peo-pdf-helper-v1.7.0';
+const CACHE_NAME = 'peo-pdf-helper-v1.7.1';
 const CORE_ASSETS = [
     './',
     './index.html',
@@ -58,7 +58,7 @@ self.addEventListener('fetch', (event) => {
 
     // Cache-first for pinned libraries, fonts, and images
     event.respondWith(
-        caches.match(event.request).then((cached) => {
+        caches.match(event.request, { ignoreSearch: true }).then((cached) => {
             if (cached) return cached;
             return fetch(event.request).then((res) => {
                 if (res && res.ok) {
