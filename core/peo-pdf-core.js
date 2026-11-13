@@ -1,7 +1,7 @@
 (function (global) {
     'use strict';
 
-    const VERSION = '1.7.0';
+    const VERSION = '1.7.1';
     const _scriptSrc = (typeof document !== 'undefined' && document.currentScript && document.currentScript.src)
         ? document.currentScript.src
         : '';
@@ -370,9 +370,27 @@
         return await doc.save();
     }
 
+    function parseColorToRgb(colorInput, rgb) {
+        if (!colorInput || typeof colorInput !== 'string') return rgb(0, 0, 0);
+        const clean = colorInput.trim().replace(/^#/, '');
+        if (/^[0-9a-fA-F]{6}$/.test(clean)) {
+            const r = parseInt(clean.slice(0, 2), 16) / 255;
+            const g = parseInt(clean.slice(2, 4), 16) / 255;
+            const b = parseInt(clean.slice(4, 6), 16) / 255;
+            return rgb(r, g, b);
+        }
+        if (/^[0-9a-fA-F]{3}$/.test(clean)) {
+            const r = parseInt(clean[0] + clean[0], 16) / 255;
+            const g = parseInt(clean[1] + clean[1], 16) / 255;
+            const b = parseInt(clean[2] + clean[2], 16) / 255;
+            return rgb(r, g, b);
+        }
+        return rgb(0, 0, 0);
+    }
+
     async function createBlankPagePdfBytes(options = {}) {
         const { PDFLib, fontkit } = getDeps(options);
-        const { PDFDocument } = PDFLib;
+        const { PDFDocument, rgb } = PDFLib;
         const blankDoc = await PDFDocument.create();
         const pageW = options.pageW || 595.28;
         const pageH = options.pageH || 841.89;
@@ -393,7 +411,8 @@
             }
 
             const font = await blankDoc.embedFont(fontBytes, { subset: true });
-            const fontSize = options.fontSize || 20;
+            const fontSize = Math.max(8, Math.min(120, parseInt(options.fontSize, 10) || 20));
+            const textColor = parseColorToRgb(options.textColor || '#000000', rgb);
             const maxWidth = pageW - 80;
             const lineHeight = fontSize * 1.4;
 
@@ -423,7 +442,7 @@
                 const tw = font.widthOfTextAtSize(line, fontSize);
                 const x = (pageW - tw) / 2;
                 const y = startY - idx * lineHeight;
-                blankPage.drawText(line, { x, y, size: fontSize, font });
+                blankPage.drawText(line, { x, y, size: fontSize, font, color: textColor });
             });
         }
 

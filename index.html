@@ -16,7 +16,7 @@
     <script src="lib/pdf-lib.min.js"></script>
     <script src="lib/fontkit.umd.js"></script>
     <script src="lib/Sortable.min.js"></script>
-    <script src="core/peo-pdf-core.js?v=1.7.0"></script>
+    <script src="core/peo-pdf-core.js?v=1.7.1"></script>
 
     <style>
         :root { 
@@ -173,7 +173,7 @@
     <div class="header-brand">
         <img src="img/logo.png" alt="PEO Udon Logo" class="system-logo" onerror="this.style.display='none'">
         <h1 class="system-title">Udon Thani Provincial Education Office PDF Helper</h1>
-        <span id="app-version-badge" style="font-size:11px; background:var(--success); color:white; padding:3px 10px; border-radius:12px; font-weight:bold;">v1.7.0 Core SDK + สารบรรณ</span>
+        <span id="app-version-badge" style="font-size:11px; background:var(--success); color:white; padding:3px 10px; border-radius:12px; font-weight:bold;">v1.7.1 Core SDK + สารบรรณ</span>
     </div>
     <div class="header-actions">
         <button type="button" class="btn btn-secondary" style="font-size:12px; height:30px; padding:2px 10px;" onclick="openSettingsModal()">⚙️ ตั้งค่าระบบ</button>
@@ -396,8 +396,14 @@
                         <button type="button" class="btn btn-primary" style="height:30px; font-size:12px;" onclick="insertBlankPage()">➕ แทรกหน้าว่าง A4</button>
                     </div>
                     <div class="form-row" style="margin-top:6px;">
-                        <input type="text" id="blank-page-text" placeholder="เช่น เอกสารแนบ 1" style="height:30px; font-size:12px;">
-                        <button type="button" class="btn btn-primary" style="height:30px; font-size:12px; white-space:nowrap;" onclick="insertBlankPageWithText()">➕ แทรกพร้อมข้อความ</button>
+                        <input type="text" id="blank-page-text" placeholder="ข้อความหน้าคั่น เช่น เอกสารแนบ 1" style="height:30px; font-size:12px;">
+                    </div>
+                    <div class="form-row" style="margin-top:6px; gap:6px; flex-wrap:wrap;">
+                        <label style="min-width:auto;">ขนาด:</label>
+                        <input type="number" id="blank-page-size" value="24" min="10" max="120" style="width:58px; height:28px;" onchange="saveSettings()">
+                        <label style="min-width:auto; margin-left:4px;">สี:</label>
+                        <input type="color" id="blank-page-color" value="#000000" style="width:34px; height:28px; padding:2px; border:1px solid var(--border); border-radius:6px; background:var(--card-bg); cursor:pointer;" onchange="saveSettings()">
+                        <button type="button" class="btn btn-primary" style="height:28px; font-size:12px; margin-left:auto; white-space:nowrap;" onclick="insertBlankPageWithText()">➕ แทรกพร้อมข้อความ</button>
                     </div>
                     <hr style="border:0; border-top:1px dashed var(--border); margin:10px 0;">
                     <div class="doc-tools-card-title">
@@ -1167,6 +1173,8 @@
                 wmAngle: document.getElementById('wm-angle').value,
                 skipUnprintedCount: document.getElementById('skip-unprinted-count').checked,
                 cleanMetadata: document.getElementById('clean-metadata').checked,
+                blankPageSize: document.getElementById('blank-page-size').value,
+                blankPageColor: document.getElementById('blank-page-color').value,
                 sectionNumEnable: document.getElementById('section-num-enable').checked,
                 sectionRules: getSectionRulesFromUI()
             };
@@ -1225,6 +1233,8 @@
             if (s.wmAngle) document.getElementById('wm-angle').value = s.wmAngle;
             if (s.skipUnprintedCount !== undefined) document.getElementById('skip-unprinted-count').checked = s.skipUnprintedCount;
             if (s.cleanMetadata !== undefined) document.getElementById('clean-metadata').checked = s.cleanMetadata;
+            if (s.blankPageSize) document.getElementById('blank-page-size').value = s.blankPageSize;
+            if (s.blankPageColor) document.getElementById('blank-page-color').value = s.blankPageColor;
             if (s.sectionNumEnable !== undefined) document.getElementById('section-num-enable').checked = s.sectionNumEnable;
             if (Array.isArray(s.sectionRules) && s.sectionRules.length) {
                 document.getElementById('section-rules-list').innerHTML = '';
@@ -1696,12 +1706,16 @@
         showLoading(customText ? 'กำลังสร้างหน้าคั่นข้อความ...' : 'กำลังสร้างหน้าว่าง...', 50, false);
         try {
             const fontStyleFile = (document.getElementById('font-style') && document.getElementById('font-style').value) || 'THSARABUNNEW.TTF';
-            const blankBytes = await PeoPdfCore.createBlankPagePdfBytes({ customText, fontStyleFile });
+            const fontSizeEl = document.getElementById('blank-page-size');
+            const colorEl = document.getElementById('blank-page-color');
+            const fontSize = Math.max(8, Math.min(120, parseInt(fontSizeEl ? fontSizeEl.value : 24, 10) || 24));
+            const textColor = (colorEl && colorEl.value) || '#000000';
+            const blankBytes = await PeoPdfCore.createBlankPagePdfBytes({ customText, fontStyleFile, fontSize, textColor });
             const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(blankBytes) }).promise;
             const page = await pdf.getPage(1);
             const card = await createPageCard(page, 1, blankBytes, {
                 fileName: customText || 'หน้าว่าง A4',
-                color: '#6c757d',
+                color: customText ? textColor : '#6c757d',
                 customTag: customText ? `หน้าคั่น: ${customText}` : 'หน้าว่าง A4'
             });
             card.classList.add('blank-card');
