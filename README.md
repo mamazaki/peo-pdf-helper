@@ -87,8 +87,55 @@
 
 ---
 
+## 🔌 7. การนำไปใช้งานร่วมกับโครงการอื่น (Core SDK & Embed Mode)
+ตั้งแต่ **Version 1.7.0** ระบบได้แยกส่วนประมวลผล PDF ออกจากหน้าเว็บหลักเพื่อให้โครงการอื่น (เช่น PMSS, ระบบสารบรรณ, E-Meeting) ดึง Core ไปใช้ได้ 2 รูปแบบ โดยเวลาโครงการหลักอัปเดต โครงการลูกสามารถอัปเดตเฉพาะ Core ได้โดยไม่กระทบโค้ดส่วนที่พัฒนาเพิ่ม:
+
+### 7.1 เรียกใช้ Headless Core SDK (`core/peo-pdf-core.js`)
+เหมาะสำหรับระบบที่มีหน้าจอ UI ของตัวเอง แต่อยากเรียกใช้เอนจินรวมไฟล์ / ประทับตรารับหนังสือ / รันเลขหน้า / ลายน้ำ:
+```html
+<script src="https://udonpeo.go.th/peo-pdf-helper/lib/pdf-lib.min.js"></script>
+<script src="https://udonpeo.go.th/peo-pdf-helper/lib/fontkit.umd.js"></script>
+<script src="https://udonpeo.go.th/peo-pdf-helper/core/peo-pdf-core.js"></script>
+<script>
+  const pdfBytes = await PeoPdfCore.buildPdf({
+    pages: [{ pdfBytes: existingArrayBuffer, originalIdx: 0, rotation: 0 }],
+    numbering: { enabled: true, startSheet: 1, startNum: 1, globalType: 'thai', pos: 'TC' },
+    stamp: { enabled: true, dept: 'กลุ่มอำนวยการ', no: '123/2569', date: '13 พ.ย. 2569', time: '09:30 น.', pos: 'TR' },
+    watermark: { enabled: false },
+    cleanMetadata: true
+  });
+</script>
+```
+* **เมธอดหลักใน `PeoPdfCore`:** `buildPdf()`, `extractPagesPdfBytes()`, `imageFileToPdfBytes()`, `createBlankPagePdfBytes()`, `calculatePageNumbers()`, `parsePageRange()`, `mapVisualPointToRaw()`, `mapVisualRectToRaw()`
+* **การอัปเดต:** หากใช้ไฟล์ในเครื่องลูก ให้คัดลอกเฉพาะไฟล์ `core/peo-pdf-core.js` ไปทับ หรือชี้ `<script src="...">` มายังโฮสต์หลักโดยตรง
+
+### 7.2 ฝังหน้าจอเต็มผ่าน `<iframe>` (`?mode=embed` + `postMessage`)
+เหมาะสำหรับระบบที่ต้องการเปิดหน้าจอจัดเรียงหน้า หมุนหน้า และดูพรีวิวครบชุดแล้วส่ง PDF กลับเข้าระบบ:
+1. เปิด `https://udonpeo.go.th/peo-pdf-helper/?mode=embed` ใน `<iframe>`
+2. รอ Event `{ type: 'PEO_PDF_READY' }` แล้วส่งไฟล์และค่าตั้งต้นเข้าไปด้วย `PEO_PDF_LOAD`:
+```javascript
+iframe.contentWindow.postMessage({
+  action: 'PEO_PDF_LOAD',
+  clearExisting: true,
+  settings: {
+    filename: 'หนังสือรับ_123',
+    stamp: { enabled: true, dept: 'กลุ่มอำนวยการ', no: '123/2569', date: '13 พ.ย. 2569', time: '09:30 น.' },
+    numbering: { enabled: false }
+  },
+  files: [{ name: 'document.pdf', data: arrayBuffer }]
+}, '*');
+```
+3. เมื่อผู้ใช้กดปุ่ม `📤 ส่งกลับระบบหลัก` (หรือแม่สั่ง `{ action: 'PEO_PDF_REQUEST_EXPORT' }`) ระบบจะส่ง `PEO_PDF_EXPORTED` กลับมาพร้อม `pdfBytes` (`Uint8Array`) และ `filename`
+
+---
+
 ## 🚀 ประวัติการปรับปรุงเวอร์ชัน (Changelog)
-### Version 1.6.0 (ล่าสุด)
+### Version 1.7.0 (ล่าสุด)
+* 🧩 **แยก Core SDK (`core/peo-pdf-core.js`):** แยกตรรกะประมวลผล PDF ทั้งหมดออกจาก DOM เพื่อให้ระบบอื่นเรียกใช้ `window.PeoPdfCore` ได้โดยตรง และอัปเดตเฉพาะ Core ได้ไม่กระทบส่วนอื่น
+* 🔗 **เพิ่ม Embed Mode (`?mode=embed`) & `postMessage` API:** รองรับการฝังใน `<iframe>` รับไฟล์/ค่าตั้งต้นจากระบบภายนอก และปุ่ม `📤 ส่งกลับระบบหลัก`
+* 🐞 **ปรับปรุงเสถียรภาพ:** ปรับปรุงการวาง Overlay แบบเปอร์เซ็นต์ใน `.page-box`, แยก error รายไฟล์ตอนนำเข้ารูปภาพ, และปรับ `zoomCard` ให้ตรงสเกลหน้าจอจริง
+
+### Version 1.6.0
 * ⚙️ **ระบบตั้งค่าและจัดการสังกัด/กลุ่ม (System Settings):**
   * Dropdown สังกัด/กลุ่มงานมาตรฐาน 10 กลุ่มงาน + *"อื่น ๆ (ระบุเอง)"* พร้อมปรับขนาดกรอบตรายางอัตโนมัติ
   * หน้าต่าง Modal `⚙️ ตั้งค่าระบบ` สำหรับเพิ่ม แก้ไข ลบ สลับลำดับ และคืนค่าเริ่มต้น โดยจัดเก็บไว้ใน `localStorage`

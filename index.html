@@ -16,6 +16,7 @@
     <script src="lib/pdf-lib.min.js"></script>
     <script src="lib/fontkit.umd.js"></script>
     <script src="lib/Sortable.min.js"></script>
+    <script src="core/peo-pdf-core.js"></script>
 
     <style>
         :root { 
@@ -275,6 +276,7 @@
             <button id="btn-preview-toggle" class="btn" style="background:#6c757d; color:white;">👁️ ดูเลข</button>
             <button id="btn-clear" class="btn btn-danger">🗑️ ล้างทั้งหมด</button>
             <button id="btn-export" class="btn btn-success" title="ส่งออกไฟล์ (Ctrl+S)">💾 Download PDF</button>
+            <button id="btn-send-host" class="btn btn-primary" style="display:none; background:#6f42c1;" title="ส่งไฟล์ PDF ที่รวมแล้วกลับไปยังระบบหลัก">📤 ส่งกลับระบบหลัก</button>
         </div>
 
         <div class="system-credit">
@@ -918,11 +920,11 @@
     }
 
     function toThaiNum(str) {
-        return String(str).replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
+        return PeoPdfCore.toThaiNum(str);
     }
 
     function toArabicNum(str) {
-        return String(str).replace(/[๐-๙]/g, d => '๐๑๒๓๔๕๖๗๘๙'.indexOf(d));
+        return PeoPdfCore.toArabicNum(str);
     }
 
     function formatStampDigits(str, useThai = null) {
@@ -930,7 +932,7 @@
             const cb = document.getElementById('stamp-thai-num');
             useThai = !!(cb && cb.checked);
         }
-        return useThai ? toThaiNum(toArabicNum(str)) : toArabicNum(str);
+        return PeoPdfCore.formatDigits(str, useThai);
     }
 
     function syncStampNumberUI(convertValues = false) {
@@ -1687,55 +1689,8 @@
     async function insertBlankPage(customText = '') {
         showLoading(customText ? 'กำลังสร้างหน้าคั่นข้อความ...' : 'กำลังสร้างหน้าว่าง...', 50, false);
         try {
-            const { PDFDocument } = PDFLib;
-            const blankDoc = await PDFDocument.create();
-            const pageW = 595.28;
-            const pageH = 841.89;
-            const blankPage = blankDoc.addPage([pageW, pageH]);
-
-            if (customText) {
-                blankDoc.registerFontkit(fontkit);
-                const fontStyleFile = document.getElementById('font-style').value || 'THSARABUNNEW.TTF';
-                let fontRes = await fetch('fonts/' + fontStyleFile);
-                if (!fontRes.ok) fontRes = await fetch('fonts/THSARABUNNEW.TTF');
-                if (!fontRes.ok) throw new Error(`ไม่พบไฟล์ฟอนต์สำหรับสร้างข้อความ (Error ${fontRes.status})`);
-
-                const font = await blankDoc.embedFont(await fontRes.arrayBuffer(), { subset: true });
-                const fontSize = 20;
-                const maxWidth = pageW - 80;
-                const lineHeight = fontSize * 1.4;
-
-                const lines = [];
-                for (const rawLine of customText.split(/\r?\n/)) {
-                    if (font.widthOfTextAtSize(rawLine, fontSize) <= maxWidth) {
-                        lines.push(rawLine);
-                    } else {
-                        let current = '';
-                        for (const ch of rawLine) {
-                            const test = current + ch;
-                            if (font.widthOfTextAtSize(test, fontSize) > maxWidth && current) {
-                                lines.push(current);
-                                current = ch;
-                            } else {
-                                current = test;
-                            }
-                        }
-                        if (current) lines.push(current);
-                    }
-                }
-
-                const totalBlockHeight = lines.length * lineHeight;
-                const startY = (pageH + totalBlockHeight) / 2 - fontSize;
-                lines.forEach((line, idx) => {
-                    if (!line) return;
-                    const tw = font.widthOfTextAtSize(line, fontSize);
-                    const x = (pageW - tw) / 2;
-                    const y = startY - idx * lineHeight;
-                    blankPage.drawText(line, { x, y, size: fontSize, font });
-                });
-            }
-
-            const blankBytes = await blankDoc.save();
+            const fontStyleFile = (document.getElementById('font-style') && document.getElementById('font-style').value) || 'THSARABUNNEW.TTF';
+            const blankBytes = await PeoPdfCore.createBlankPagePdfBytes({ customText, fontStyleFile });
             const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(blankBytes) }).promise;
             const page = await pdf.getPage(1);
             const card = await createPageCard(page, 1, blankBytes, {
@@ -1796,155 +1751,8 @@
         }
     }
 
-    function getJpegExifOrientation(buffer) {
-        const view = new DataView(buffer);
-        if (view.byteLength < 12 || view.getUint16(0, false) !== 0xFFD8) return 1;
-        let offset = 2;
-        while (offset + 4 < view.byteLength) {
-            const marker = view.getUint16(offset, false);
-            offset += 2;
-            if (marker === 0xFFE1) {
-                if (view.getUint32(offset + 2, false) !== 0x45786966) break;
-                const little = view.getUint16(offset + 8, false) === 0x4949;
-                const tiffStart = offset + 8;
-                const firstIfd = view.getUint32(tiffStart + 4, little);
-                const dirStart = tiffStart + firstIfd;
-                if (dirStart + 2 > view.byteLength) break;
-                const entries = view.getUint16(dirStart, little);
-                for (let i = 0; i < entries; i++) {
-                    const entryOffset = dirStart + 2 + i * 12;
-                    if (entryOffset + 12 > view.byteLength) break;
-                    if (view.getUint16(entryOffset, little) === 0x0112) {
-                        return view.getUint16(entryOffset + 8, little);
-                    }
-                }
-                break;
-            } else if ((marker & 0xFF00) !== 0xFF00) {
-                break;
-            } else {
-                offset += view.getUint16(offset, false);
-            }
-        }
-        return 1;
-    }
-
-    async function loadDrawableImage(file) {
-        if (typeof createImageBitmap === 'function') {
-            try {
-                const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
-                return { drawable: bmp, width: bmp.width, height: bmp.height, cleanup: () => bmp.close() };
-            } catch (_) {
-                // Fallback to <img> if imageOrientation option or format fails
-            }
-        }
-        const objectUrl = URL.createObjectURL(file);
-        try {
-            const img = await new Promise((resolve, reject) => {
-                const el = new Image();
-                el.onload = () => resolve(el);
-                el.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์รูปภาพนี้ได้'));
-                el.src = objectUrl;
-            });
-            return {
-                drawable: img,
-                width: img.naturalWidth || img.width,
-                height: img.naturalHeight || img.height,
-                cleanup: () => URL.revokeObjectURL(objectUrl)
-            };
-        } catch (err) {
-            URL.revokeObjectURL(objectUrl);
-            throw err;
-        }
-    }
-
-    async function normalizeImageForPdf(file) {
-        const lowerName = file.name.toLowerCase();
-        const isJpeg = file.type === 'image/jpeg' || /\.(jpe?g)$/i.test(lowerName);
-        const preferPng = file.type === 'image/png' || file.type === 'image/webp' || file.type === 'image/gif' || /\.(png|webp|gif)$/i.test(lowerName);
-
-        if (isJpeg && file.size <= 12 * 1024 * 1024) {
-            const rawBytes = new Uint8Array(await file.arrayBuffer());
-            if (getJpegExifOrientation(rawBytes.buffer) === 1) {
-                return { bytes: rawBytes, isPng: false, passthrough: true };
-            }
-        }
-
-        const targetMime = preferPng ? 'image/png' : 'image/jpeg';
-        const loaded = await loadDrawableImage(file);
-        try {
-            const MAX_DIM = 2480;
-            let { width, height } = loaded;
-            const scale = Math.min(1, MAX_DIM / Math.max(width, height));
-            const outW = Math.max(1, Math.round(width * scale));
-            const outH = Math.max(1, Math.round(height * scale));
-
-            const canvas = document.createElement('canvas');
-            canvas.width = outW;
-            canvas.height = outH;
-            const ctx = canvas.getContext('2d');
-            if (!preferPng) {
-                ctx.fillStyle = '#ffffff';
-                ctx.fillRect(0, 0, outW, outH);
-            }
-            ctx.drawImage(loaded.drawable, 0, 0, outW, outH);
-
-            const blob = await new Promise((resolve, reject) => {
-                canvas.toBlob(b => b ? resolve(b) : reject(new Error('แปลงไฟล์รูปภาพไม่สำเร็จ')), targetMime, 0.92);
-            });
-            return { bytes: new Uint8Array(await blob.arrayBuffer()), isPng: preferPng, passthrough: false };
-        } finally {
-            loaded.cleanup();
-        }
-    }
-
     async function createCardFromImageFile(file, color) {
-        const { PDFDocument } = PDFLib;
-        const doc = await PDFDocument.create();
-        const norm = await normalizeImageForPdf(file);
-
-        let embeddedImg;
-        try {
-            embeddedImg = norm.isPng
-                ? await doc.embedPng(norm.bytes)
-                : await doc.embedJpg(norm.bytes);
-        } catch (err) {
-            if (norm.passthrough) {
-                const fallbackLoaded = await loadDrawableImage(file);
-                try {
-                    const canvas = document.createElement('canvas');
-                    canvas.width = Math.min(2480, fallbackLoaded.width);
-                    canvas.height = Math.round(fallbackLoaded.height * (canvas.width / fallbackLoaded.width));
-                    const ctx = canvas.getContext('2d');
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    ctx.drawImage(fallbackLoaded.drawable, 0, 0, canvas.width, canvas.height);
-                    const blob = await new Promise((resolve, reject) => {
-                        canvas.toBlob(b => b ? resolve(b) : reject(new Error('แปลงไฟล์รูปภาพไม่สำเร็จ')), 'image/jpeg', 0.92);
-                    });
-                    embeddedImg = await doc.embedJpg(new Uint8Array(await blob.arrayBuffer()));
-                } finally {
-                    fallbackLoaded.cleanup();
-                }
-            } else {
-                throw err;
-            }
-        }
-
-        const pageW = 595.28;
-        const pageH = 841.89;
-        const page = doc.addPage([pageW, pageH]);
-        
-        const maxW = pageW - 40;
-        const maxH = pageH - 40;
-        const scale = Math.min(maxW / embeddedImg.width, maxH / embeddedImg.height, 1);
-        const w = embeddedImg.width * scale;
-        const h = embeddedImg.height * scale;
-        const x = (pageW - w) / 2;
-        const y = (pageH - h) / 2;
-
-        page.drawImage(embeddedImg, { x, y, width: w, height: h });
-        const pdfBytes = await doc.save();
-
+        const pdfBytes = await PeoPdfCore.imageFileToPdfBytes(file);
         const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(pdfBytes) }).promise;
         const pdfPage = await pdf.getPage(1);
         const card = await createPageCard(pdfPage, 1, pdfBytes, {
@@ -1971,37 +1779,24 @@
         showLoading(`กำลังตัดแบ่งไฟล์ ${selectedIndices.length} หน้า...`, 10, true);
 
         try {
-            const { PDFDocument, degrees } = PDFLib;
-            const finalPdf = await PDFDocument.create();
-            const docCache = new Map();
+            const pages = Array.from(container.children).map(c => ({
+                pdfBytes: c._pdfBytes,
+                originalIdx: c._originalIdx,
+                rotation: parseInt(c.dataset.rotation || 0, 10)
+            }));
+            const outBytes = await PeoPdfCore.extractPagesPdfBytes({
+                pages,
+                selectedIndices,
+                cleanMetadata: document.getElementById('clean-metadata').checked,
+                onProgress: (pct, msg) => setLoadingProgress(pct, msg, true),
+                isCancelled: () => isTaskCancelled
+            });
 
-            for (let k = 0; k < selectedIndices.length; k++) {
-                if (isTaskCancelled) break;
-                setLoadingProgress(Math.round(((k + 1) / selectedIndices.length) * 100), `กำลังแยกหน้าที่ ${k + 1}/${selectedIndices.length}...`, true);
-                const idx = selectedIndices[k];
-                const card = container.children[idx];
-                let src = docCache.get(card._pdfBytes);
-                if (!src) {
-                    src = await PDFDocument.load(card._pdfBytes, { ignoreEncryption: true });
-                    docCache.set(card._pdfBytes, src);
-                }
-                const [page] = await finalPdf.copyPages(src, [card._originalIdx]);
-                const rot = parseInt(card.dataset.rotation || 0);
-                const totalRot = (((page.getRotation().angle + rot) % 360) + 360) % 360;
-                page.setRotation(degrees(totalRot));
-                finalPdf.addPage(page);
-            }
-
-            if (isTaskCancelled) {
+            if (!outBytes || isTaskCancelled) {
                 showAlert('ยกเลิกการตัดแบ่งไฟล์เรียบร้อยแล้วค่ะ');
                 return;
             }
 
-            if (document.getElementById('clean-metadata').checked) {
-                clearPdfMetadata(finalPdf);
-            }
-
-            const outBytes = await finalPdf.save();
             const blob = new Blob([outBytes], { type: 'application/pdf' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
@@ -2017,34 +1812,11 @@
     }
 
     function parsePageRange(str, max) {
-        const parts = str.split(/[,;\s]+/);
-        const set = new Set();
-        for (const part of parts) {
-            if (!part) continue;
-            if (part.includes('-')) {
-                const [startStr, endStr] = part.split('-');
-                const s = parseInt(startStr);
-                const e = parseInt(endStr);
-                if (!isNaN(s) && !isNaN(e)) {
-                    for (let i = Math.min(s, e); i <= Math.max(s, e); i++) {
-                        if (i >= 1 && i <= max) set.add(i - 1);
-                    }
-                }
-            } else {
-                const n = parseInt(part);
-                if (!isNaN(n) && n >= 1 && n <= max) set.add(n - 1);
-            }
-        }
-        return Array.from(set).sort((a, b) => a - b);
+        return PeoPdfCore.parsePageRange(str, max);
     }
 
     function clearPdfMetadata(pdfDoc) {
-        pdfDoc.setTitle('');
-        pdfDoc.setAuthor('');
-        pdfDoc.setSubject('');
-        pdfDoc.setKeywords([]);
-        pdfDoc.setProducer('');
-        pdfDoc.setCreator('');
+        return PeoPdfCore.clearPdfMetadata(pdfDoc);
     }
 
     function rotateCard(card) {
@@ -2143,6 +1915,7 @@
     // -------------------------------------------------------------
     function calculatePageNumbers(startNum, startSheet = null) {
         const cards = Array.from(container.children);
+        const pagePrintFlags = cards.map(c => !!(c.querySelector('.toggle-print') && c.querySelector('.toggle-print').checked));
         const skipUnprinted = document.getElementById('skip-unprinted-count').checked;
         const useSections = document.getElementById('section-num-enable').checked;
         const globalType = document.getElementById('num-type').value;
@@ -2151,96 +1924,16 @@
             const ssEl = document.getElementById('start-sheet');
             startSheet = Math.max(1, parseInt(ssEl ? ssEl.value : 1) || 1);
         }
-
-        if (!useSections) {
-            const numbers = [];
-            const shouldPrintFlags = [];
-            let cur = startNum;
-            let printableTotal = 0;
-            let activeTotal = 0;
-
-            for (let i = 0; i < cards.length; i++) {
-                const sheetNo = i + 1;
-                const cardPrint = !!(cards[i].querySelector('.toggle-print') && cards[i].querySelector('.toggle-print').checked);
-                if (sheetNo < startSheet) {
-                    numbers.push(cur);
-                    shouldPrintFlags.push(false);
-                    continue;
-                }
-                activeTotal++;
-                if (cardPrint) {
-                    numbers.push(cur);
-                    shouldPrintFlags.push(true);
-                    cur++;
-                    printableTotal++;
-                } else {
-                    numbers.push(cur);
-                    shouldPrintFlags.push(false);
-                    if (!skipUnprinted) cur++;
-                }
-            }
-            const total = skipUnprinted ? Math.max(printableTotal, 1) : Math.max(activeTotal, 1);
-            const perPage = cards.map((_, i) => ({
-                shouldPrint: shouldPrintFlags[i],
-                num: numbers[i],
-                total: total,
-                type: globalType,
-                format: globalFormat
-            }));
-            return { numbers, total, perPage };
-        }
-
-        // Multi-section calculation
-        const rules = getSectionRulesFromUI().sort((a, b) => a.startPage - b.startPage);
-        if (!rules.length) {
-            rules.push({ startPage: 1, type: globalType, format: globalFormat, startNum });
-        }
-
-        const matchedRulePerCard = cards.map((_, i) => {
-            const p = i + 1;
-            let matched = rules[0];
-            for (const r of rules) {
-                if (r.startPage <= p) matched = r;
-                else break;
-            }
-            return matched;
+        const rules = useSections ? getSectionRulesFromUI() : [];
+        return PeoPdfCore.calculatePageNumbers(pagePrintFlags, {
+            startNum,
+            startSheet,
+            skipUnprinted,
+            useSections,
+            globalType,
+            globalFormat,
+            rules
         });
-
-        // Group cards by matched rule instance to compute section totals and counters
-        const sectionState = new Map();
-        const perPage = cards.map((card, i) => {
-            const rule = matchedRulePerCard[i];
-            if (!sectionState.has(rule)) {
-                sectionState.set(rule, { cur: rule.startNum, allCount: 0, printableCount: 0 });
-            }
-            const st = sectionState.get(rule);
-            const isPrint = !!(card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked);
-            const assignedNum = st.cur;
-            st.allCount++;
-            if (isPrint) {
-                st.printableCount++;
-                st.cur++;
-            } else if (!skipUnprinted) {
-                st.cur++;
-            }
-            return { rule, num: assignedNum, shouldPrint: isPrint };
-        });
-
-        const finalPerPage = perPage.map(entry => {
-            const st = sectionState.get(entry.rule);
-            const secTotal = skipUnprinted ? Math.max(st.printableCount, 1) : Math.max(st.allCount, 1);
-            return {
-                shouldPrint: entry.shouldPrint,
-                num: entry.num,
-                total: secTotal,
-                type: entry.rule.type,
-                format: entry.rule.format
-            };
-        });
-
-        const numbers = finalPerPage.map(p => p.num);
-        const total = Math.max(cards.length, 1);
-        return { numbers, total, perPage: finalPerPage };
     }
 
     function applyStampOverlay(el, pageIndex, vW = 595.28, vH = 841.89, zoomScale = 0) {
@@ -2359,18 +2052,7 @@
     }
 
     function getFormattedNumberText(num, total, type, format) {
-        let str = num.toString();
-        let strTotal = total.toString();
-        if (type === 'thai') {
-            str = num.toString().replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
-            strTotal = total.toString().replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
-        }
-        else if (type === 'thai-alpha') {
-            const alphabet = "กขคฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสฬอฮ";
-            str = alphabet[(num - 1) % alphabet.length];
-            strTotal = alphabet[(total - 1) % alphabet.length];
-        }
-        return format.replace('{n}', str).replace('{total}', strTotal);
+        return PeoPdfCore.getFormattedNumberText(num, total, type, format);
     }
 
     function buildOutputFilename() {
@@ -2385,217 +2067,98 @@
     }
 
     function mapVisualPointToRaw(vx, vy, box, totalRot) {
-        if (totalRot === 90) return { x: box.x + box.width - vy, y: box.y + vx };
-        if (totalRot === 180) return { x: box.x + box.width - vx, y: box.y + box.height - vy };
-        if (totalRot === 270) return { x: box.x + vy, y: box.y + box.height - vx };
-        return { x: box.x + vx, y: box.y + vy };
+        return PeoPdfCore.mapVisualPointToRaw(vx, vy, box, totalRot);
     }
 
     function mapVisualRectToRaw(bx, by, bw, bh, box, totalRot) {
-        if (totalRot === 90) return { x: box.x + box.width - by - bh, y: box.y + bx, width: bh, height: bw };
-        if (totalRot === 180) return { x: box.x + box.width - bx - bw, y: box.y + box.height - by - bh, width: bw, height: bh };
-        if (totalRot === 270) return { x: box.x + by, y: box.y + box.height - bx - bw, width: bh, height: bw };
-        return { x: box.x + bx, y: box.y + by, width: bw, height: bh };
+        return PeoPdfCore.mapVisualRectToRaw(bx, by, bw, bh, box, totalRot);
     }
 
     // -------------------------------------------------------------
     // Export Final PDF with Numbering + Stamp + Watermark
     // -------------------------------------------------------------
-    document.getElementById('btn-export').onclick = async () => {
+    async function generateFinalPdfBytes() {
         if (!container.children.length) {
             showAlert('กรุณาเลือกไฟล์ PDF หรือรูปภาพก่อนค่ะ!');
-            return;
+            return null;
         }
         showLoading('กำลังจัดเตรียมไฟล์ PDF...', 5, true);
-        
+
         try {
-            const { PDFDocument, degrees, rgb, pushGraphicsState, popGraphicsState } = PDFLib;
-            const finalPdf = await PDFDocument.create();
-            finalPdf.registerFontkit(fontkit);
-
-            const isMasterEnabled = document.getElementById('master-num-toggle').checked;
-            const stampEnabled = document.getElementById('stamp-enable').checked;
-            const wmEnabled = document.getElementById('wm-enable').checked;
-            
-            setLoadingProgress(10, 'กำลังโหลดฟอนต์สารบรรณ...', true);
-            const fontFileName = document.getElementById('font-style').value;
-            const fontRes = await fetch('fonts/' + fontFileName);
-            if (!fontRes.ok) throw new Error(`ไม่พบไฟล์ฟอนต์ ${fontFileName} ในระบบ (Error ${fontRes.status})`);
-            const fontBytes = await fontRes.arrayBuffer();
-            const font = await finalPdf.embedFont(fontBytes, { subset: true });
-
-            let fontBold = font;
-            try {
-                const fbRes = await fetch('fonts/THSARABUNNEWBOLD.TTF');
-                if (fbRes.ok) {
-                    fontBold = await finalPdf.embedFont(await fbRes.arrayBuffer(), { subset: true });
-                }
-            } catch (err) {}
-
-            const posType = document.getElementById('num-pos').value;
-            const fSize = Math.max(6, Math.min(72, parseInt(document.getElementById('font-size').value) || 16));
             const startNum = Math.max(1, parseInt(document.getElementById('start-num').value) || 1);
-            const ox = parseInt(document.getElementById('offset-x').value) || 0;
-            const oy = parseInt(document.getElementById('offset-y').value) || 0;
-
+            const startSheet = Math.max(1, parseInt(document.getElementById('start-sheet').value) || 1);
             const { perPage } = calculatePageNumbers(startNum);
 
-            const stampUseThai = !!(document.getElementById('stamp-thai-num') && document.getElementById('stamp-thai-num').checked);
-            const stampDept = formatStampDigits(getStampDeptValue(), stampUseThai);
-            const stampNo = formatStampDigits(document.getElementById('stamp-no').value || '', stampUseThai);
-            const stampDate = formatStampDigits(document.getElementById('stamp-date').value || '', stampUseThai);
-            const stampTime = formatStampDigits(document.getElementById('stamp-time').value || '', stampUseThai);
-            const stampPageSetting = document.getElementById('stamp-page').value;
-            const stampPosSetting = document.getElementById('stamp-pos').value;
-
-            const wmText = document.getElementById('wm-text').value.trim();
-            const wmSize = parseInt(document.getElementById('wm-size').value) || 50;
-            const wmAngleVal = parseInt(document.getElementById('wm-angle').value) || 45;
-            const wmColorType = document.getElementById('wm-color').value;
-            let wmColorRgb = rgb(0.85, 0.2, 0.2);
-            if (wmColorType === 'gray') wmColorRgb = rgb(0.5, 0.5, 0.5);
-            else if (wmColorType === 'blue') wmColorRgb = rgb(0.1, 0.3, 0.8);
-
-            const docCache = new Map();
             const cards = Array.from(container.children);
+            const pages = cards.map(card => ({
+                pdfBytes: card._pdfBytes,
+                originalIdx: card._originalIdx,
+                rotation: parseInt(card.dataset.rotation || 0, 10),
+                shouldPrint: !!(card.querySelector('.toggle-print') && card.querySelector('.toggle-print').checked)
+            }));
 
-            for (let i = 0; i < cards.length; i++) {
-                if (isTaskCancelled) break;
-                const pct = 15 + Math.round(((i + 1) / cards.length) * 75);
-                setLoadingProgress(pct, `กำลังรวมหน้าที่ ${i + 1} จาก ${cards.length}...`, true);
+            const pdfBytesOut = await PeoPdfCore.buildPdf({
+                pages,
+                numbering: {
+                    enabled: document.getElementById('master-num-toggle').checked,
+                    pos: document.getElementById('num-pos').value,
+                    fontStyleFile: document.getElementById('font-style').value,
+                    fontSize: parseInt(document.getElementById('font-size').value) || 16,
+                    startNum,
+                    startSheet,
+                    offsetX: parseInt(document.getElementById('offset-x').value) || 0,
+                    offsetY: parseInt(document.getElementById('offset-y').value) || 0,
+                    skipUnprinted: document.getElementById('skip-unprinted-count').checked,
+                    useSections: document.getElementById('section-num-enable').checked,
+                    globalType: document.getElementById('num-type').value,
+                    globalFormat: document.getElementById('num-format').value || '{n}',
+                    perPage
+                },
+                stamp: {
+                    enabled: document.getElementById('stamp-enable').checked,
+                    useThai: !!(document.getElementById('stamp-thai-num') && document.getElementById('stamp-thai-num').checked),
+                    dept: getStampDeptValue(),
+                    no: document.getElementById('stamp-no').value || '',
+                    date: document.getElementById('stamp-date').value || '',
+                    time: document.getElementById('stamp-time').value || '',
+                    page: document.getElementById('stamp-page').value,
+                    pos: document.getElementById('stamp-pos').value
+                },
+                watermark: {
+                    enabled: document.getElementById('wm-enable').checked,
+                    text: document.getElementById('wm-text').value.trim(),
+                    size: parseInt(document.getElementById('wm-size').value) || 50,
+                    angle: parseInt(document.getElementById('wm-angle').value) || 45,
+                    color: document.getElementById('wm-color').value
+                },
+                cleanMetadata: document.getElementById('clean-metadata').checked,
+                onProgress: (pct, msg) => setLoadingProgress(pct, msg, true),
+                isCancelled: () => isTaskCancelled
+            });
 
-                const card = cards[i];
-                let src = docCache.get(card._pdfBytes);
-                if (!src) {
-                    src = await PDFDocument.load(card._pdfBytes, { ignoreEncryption: true });
-                    docCache.set(card._pdfBytes, src);
-                }
-
-                const [page] = await finalPdf.copyPages(src, [card._originalIdx]);
-                const rot = parseInt(card.dataset.rotation || 0);
-                const totalRot = (((page.getRotation().angle + rot) % 360) + 360) % 360;
-                page.setRotation(degrees(totalRot));
-
-                // Isolate any leftover CTM/graphics state in the source PDF page
-                if (typeof page.node.normalize === 'function') page.node.normalize();
-                const qStart = finalPdf.context.register(page.createContentStream(pushGraphicsState()));
-                const qEnd = finalPdf.context.register(page.createContentStream(popGraphicsState()));
-                page.node.wrapContentStreams(qStart, qEnd);
-
-                const cropBox = page.getCropBox ? page.getCropBox() : { x: 0, y: 0, ...page.getSize() };
-                const { width, height } = cropBox;
-                const vW = (totalRot === 90 || totalRot === 270) ? height : width;
-                const vH = (totalRot === 90 || totalRot === 270) ? width : height;
-
-                // 1) ประทับลายน้ำ
-                if (wmEnabled && wmText) {
-                    const tw = fontBold.widthOfTextAtSize(wmText, wmSize);
-                    const rcx = cropBox.x + width / 2;
-                    const rcy = cropBox.y + height / 2;
-                    const theta = (wmAngleVal + totalRot) * Math.PI / 180;
-                    page.drawText(wmText, {
-                        x: rcx - (tw / 2) * Math.cos(theta),
-                        y: rcy - (tw / 2) * Math.sin(theta),
-                        size: wmSize,
-                        font: fontBold,
-                        color: wmColorRgb,
-                        opacity: 0.18,
-                        rotate: degrees(wmAngleVal + totalRot)
-                    });
-                }
-
-                // 2) รันเลขหน้า
-                const cfg = perPage[i];
-                if (isMasterEnabled && cfg && cfg.shouldPrint && font) {
-                    const text = getFormattedNumberText(cfg.num, cfg.total, cfg.type, cfg.format); 
-                    const tw = font.widthOfTextAtSize(text, fSize);
-                    let margin = 40;
-                    let tx, ty;
-                    if(posType === 'TR') { tx = vW - tw - margin + ox; ty = vH - margin - fSize + oy; }
-                    else if(posType === 'TC') { tx = (vW - tw)/2 + ox; ty = vH - margin - fSize + oy; }
-                    else if(posType === 'BR') { tx = vW - tw - margin + ox; ty = margin + oy; }
-                    else if(posType === 'BC') { tx = (vW - tw)/2 + ox; ty = margin + oy; }
-                    const pt = mapVisualPointToRaw(tx, ty, cropBox, totalRot);
-                    page.drawText(text, { x: pt.x, y: pt.y, size: fSize, font, rotate: degrees(totalRot) });
-                }
-
-                // 3) ประทับตรายางรับหนังสือ
-                const shouldStamp = stampEnabled && (stampPageSetting === 'all' || i === 0);
-                if (shouldStamp) {
-                    const maxLineTw = Math.max(
-                        fontBold.widthOfTextAtSize(stampDept, 12),
-                        font.widthOfTextAtSize(`เลขรับ: ${stampNo || '........................'}`, 11),
-                        font.widthOfTextAtSize(`วันที่: ${stampDate || '........................'}`, 11),
-                        font.widthOfTextAtSize(`เวลา: ${stampTime || '........................'}`, 11)
-                    );
-                    const maxBoxW = Math.max(80, vW - 20);
-                    const boxW = Math.min(maxBoxW, Math.max(165, maxLineTw + 24));
-                    const boxH = 75;
-                    const marginEdge = Math.min(25, Math.max(8, (vW - boxW) / 2));
-                    let bx = (stampPosSetting === 'TR') ? (vW - boxW - marginEdge) : marginEdge;
-                    let by = vH - boxH - marginEdge;
-
-                    const rawRect = mapVisualRectToRaw(bx, by, boxW, boxH, cropBox, totalRot);
-                    page.drawRectangle({
-                        x: rawRect.x,
-                        y: rawRect.y,
-                        width: rawRect.width,
-                        height: rawRect.height,
-                        borderWidth: 1.5,
-                        borderColor: rgb(0.1, 0.25, 0.7)
-                    });
-
-                    const lines = [
-                        { text: stampDept, size: 12, bold: true, offY: 58 },
-                        { text: `เลขรับ: ${stampNo || '........................'}`, size: 11, bold: false, offY: 42 },
-                        { text: `วันที่: ${stampDate || '........................'}`, size: 11, bold: false, offY: 26 },
-                        { text: `เวลา: ${stampTime || '........................'}`, size: 11, bold: false, offY: 10 }
-                    ];
-
-                    for (const line of lines) {
-                        const curFont = line.bold ? fontBold : font;
-                        const lineTw = curFont.widthOfTextAtSize(line.text, line.size);
-                        const lineX = line.bold ? (bx + (boxW - lineTw) / 2) : (bx + 8);
-                        const lineY = by + line.offY;
-                        const rawPt = mapVisualPointToRaw(lineX, lineY, cropBox, totalRot);
-
-                        page.drawText(line.text, {
-                            x: rawPt.x,
-                            y: rawPt.y,
-                            size: line.size,
-                            font: curFont,
-                            color: rgb(0.1, 0.25, 0.7),
-                            rotate: degrees(totalRot)
-                        });
-                    }
-                }
-
-                finalPdf.addPage(page);
-            }
-
-            if (isTaskCancelled) {
+            if (!pdfBytesOut || isTaskCancelled) {
                 showAlert('ยกเลิกการสร้างไฟล์ PDF เรียบร้อยแล้วค่ะ');
-                return;
+                return null;
             }
-
-            if (document.getElementById('clean-metadata').checked) {
-                clearPdfMetadata(finalPdf);
-            }
-
-            setLoadingProgress(95, 'กำลังสร้างไฟล์ PDF สำเร็จรูป...', false);
-            const pdfBytesOut = await finalPdf.save();
-            const blob = new Blob([pdfBytesOut], { type: 'application/pdf' });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = buildOutputFilename();
-            a.click();
-            setTimeout(() => URL.revokeObjectURL(a.href), 15000);
-        } catch(e) { 
-            console.error(e); 
-            showAlert(`เกิดข้อผิดพลาดในการประมวลผล:\n${e.message}`); 
+            return pdfBytesOut;
+        } catch (e) {
+            console.error(e);
+            showAlert(`เกิดข้อผิดพลาดในการประมวลผล:\n${e.message}`);
+            return null;
         } finally {
             hideLoading();
         }
+    }
+
+    document.getElementById('btn-export').onclick = async () => {
+        const pdfBytesOut = await generateFinalPdfBytes();
+        if (!pdfBytesOut) return;
+        const blob = new Blob([pdfBytesOut], { type: 'application/pdf' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = buildOutputFilename();
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 15000);
     };
 
     function updateFormatOptions() {
@@ -2759,9 +2322,175 @@
         }
     });
 
+    // -------------------------------------------------------------
+    // Embed Mode & postMessage Integration API (?mode=embed)
+    // -------------------------------------------------------------
+    const urlParams = new URLSearchParams(window.location.search);
+    const isEmbedMode = urlParams.get('mode') === 'embed';
+    const sendHostBtn = document.getElementById('btn-send-host');
+    let embedHostSource = null;
+
+    function enableEmbedHostButton() {
+        if (sendHostBtn) sendHostBtn.style.display = 'inline-flex';
+    }
+
+    if (isEmbedMode) {
+        enableEmbedHostButton();
+    }
+
+    async function sendPdfToHost(explicitTarget = null) {
+        const pdfBytesOut = await generateFinalPdfBytes();
+        if (!pdfBytesOut) return;
+        const targetWin = explicitTarget || embedHostSource || (window.opener ? window.opener : (window.parent !== window ? window.parent : null));
+        if (!targetWin) {
+            showAlert('ไม่พบหน้าต่างระบบหลักที่จะส่งข้อมูลกลับค่ะ');
+            return;
+        }
+        targetWin.postMessage({
+            type: 'PEO_PDF_EXPORTED',
+            filename: buildOutputFilename(),
+            pdfBytes: pdfBytesOut,
+            pageCount: container.children.length
+        }, '*');
+    }
+
+    if (sendHostBtn) {
+        sendHostBtn.onclick = () => sendPdfToHost();
+    }
+
+    function applyExternalSettings(settings = {}) {
+        if (!settings || typeof settings !== 'object') return;
+        if (typeof settings.filename === 'string') {
+            const el = document.getElementById('export-filename');
+            if (el) el.value = settings.filename;
+        }
+        if (settings.stamp && typeof settings.stamp === 'object') {
+            const st = settings.stamp;
+            if (typeof st.enabled === 'boolean') document.getElementById('stamp-enable').checked = st.enabled;
+            if (typeof st.useThai === 'boolean') {
+                const thaiCb = document.getElementById('stamp-thai-num');
+                if (thaiCb) {
+                    thaiCb.checked = st.useThai;
+                    syncStampNumberUI(false);
+                }
+            }
+            if (typeof st.dept === 'string') {
+                const sel = document.getElementById('stamp-dept-select');
+                if (sel) {
+                    const hasOpt = Array.from(sel.options).some(o => o.value === st.dept);
+                    if (hasOpt) {
+                        sel.value = st.dept;
+                        const customRow = document.getElementById('stamp-dept-custom-row');
+                        if (customRow) customRow.style.display = 'none';
+                    } else {
+                        sel.value = '__other__';
+                        const customRow = document.getElementById('stamp-dept-custom-row');
+                        const customInp = document.getElementById('stamp-dept-custom');
+                        if (customRow) customRow.style.display = 'flex';
+                        if (customInp) customInp.value = st.dept;
+                    }
+                }
+            }
+            if (typeof st.no === 'string') document.getElementById('stamp-no').value = st.no;
+            if (typeof st.date === 'string') document.getElementById('stamp-date').value = st.date;
+            if (typeof st.time === 'string') document.getElementById('stamp-time').value = st.time;
+            if (typeof st.pos === 'string') document.getElementById('stamp-pos').value = st.pos;
+            if (typeof st.page === 'string') document.getElementById('stamp-page').value = st.page;
+        }
+        if (settings.numbering && typeof settings.numbering === 'object') {
+            const nb = settings.numbering;
+            if (typeof nb.enabled === 'boolean') {
+                document.getElementById('master-num-toggle').checked = nb.enabled;
+                toggleMasterNumbering();
+            }
+            if (typeof nb.pos === 'string') document.getElementById('num-pos').value = nb.pos;
+            if (nb.startSheet) document.getElementById('start-sheet').value = nb.startSheet;
+            if (nb.startNum) document.getElementById('start-num').value = nb.startNum;
+            if (typeof nb.type === 'string') {
+                document.getElementById('num-type').value = nb.type;
+                updateFormatOptions();
+            }
+            if (typeof nb.format === 'string') document.getElementById('num-format').value = nb.format;
+            if (nb.fontSize) document.getElementById('font-size').value = nb.fontSize;
+        }
+        if (settings.watermark && typeof settings.watermark === 'object') {
+            const wm = settings.watermark;
+            if (typeof wm.enabled === 'boolean') document.getElementById('wm-enable').checked = wm.enabled;
+            if (typeof wm.text === 'string') document.getElementById('wm-text').value = wm.text;
+            if (wm.size) document.getElementById('wm-size').value = wm.size;
+            if (wm.angle) document.getElementById('wm-angle').value = wm.angle;
+            if (typeof wm.color === 'string') document.getElementById('wm-color').value = wm.color;
+        }
+        if (typeof settings.cleanMetadata === 'boolean') {
+            document.getElementById('clean-metadata').checked = settings.cleanMetadata;
+        }
+        updateAllOverlays();
+        if (isPreviewOpen) updatePreviewNumbers();
+    }
+
+    async function normalizeExternalFiles(rawFiles = []) {
+        const result = [];
+        for (let i = 0; i < rawFiles.length; i++) {
+            const item = rawFiles[i];
+            if (!item) continue;
+            if (item instanceof File) {
+                result.push(item);
+            } else if (item instanceof Blob) {
+                result.push(new File([item], `document_${i + 1}.pdf`, { type: item.type || 'application/pdf' }));
+            } else if (item instanceof ArrayBuffer || ArrayBuffer.isView(item)) {
+                result.push(new File([item], `document_${i + 1}.pdf`, { type: 'application/pdf' }));
+            } else if (typeof item === 'object') {
+                const name = item.name || `document_${i + 1}.pdf`;
+                const mime = item.type || (/\.png$/i.test(name) ? 'image/png' : /\.jpe?g$/i.test(name) ? 'image/jpeg' : 'application/pdf');
+                const rawBytes = item.bytes || item.data;
+                if (rawBytes) {
+                    result.push(new File([rawBytes], name, { type: mime }));
+                } else if (item.url) {
+                    const resp = await fetch(item.url);
+                    if (resp.ok) {
+                        const buf = await resp.arrayBuffer();
+                        result.push(new File([buf], name, { type: resp.headers.get('content-type') || mime }));
+                    }
+                }
+            }
+        }
+        return result;
+    }
+
+    window.addEventListener('message', async (ev) => {
+        const data = ev.data;
+        if (!data || typeof data !== 'object') return;
+        const action = data.action || data.type;
+        if (action === 'PEO_PDF_INIT' || action === 'PEO_PDF_LOAD') {
+            embedHostSource = ev.source || embedHostSource;
+            enableEmbedHostButton();
+            if (data.clearExisting) {
+                container.innerHTML = '';
+                lastSelectedCard = null;
+                updateAllBadges();
+            }
+            if (data.settings) applyExternalSettings(data.settings);
+            if (Array.isArray(data.files) && data.files.length) {
+                try {
+                    const files = await normalizeExternalFiles(data.files);
+                    if (files.length) await handleFiles(files);
+                } catch (err) {
+                    showAlert(`ไม่สามารถโหลดไฟล์จากระบบหลักได้:\n${err.message}`);
+                }
+            }
+        } else if (action === 'PEO_PDF_REQUEST_EXPORT') {
+            embedHostSource = ev.source || embedHostSource;
+            await sendPdfToHost(ev.source || embedHostSource);
+        }
+    });
+
     window.onload = () => { 
         updateFormatOptions(); 
-        saveHistory(); 
+        saveHistory();
+        const hostTarget = window.opener || (window.parent !== window ? window.parent : null);
+        if (hostTarget) {
+            hostTarget.postMessage({ type: 'PEO_PDF_READY', version: PeoPdfCore.VERSION }, '*');
+        }
     };
 </script>
 </body>

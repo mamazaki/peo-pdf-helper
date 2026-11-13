@@ -1,8 +1,9 @@
-const CACHE_NAME = 'peo-pdf-helper-v1.6.3';
+const CACHE_NAME = 'peo-pdf-helper-v1.7.0';
 const CORE_ASSETS = [
     './',
     './index.html',
     './manifest.json',
+    './core/peo-pdf-core.js',
     './img/logo.png',
     './lib/pdf.min.js',
     './lib/pdf.worker.min.js',
