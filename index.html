@@ -42,6 +42,9 @@
             margin-bottom: 15px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; position: sticky; top: 15px; z-index: 100;
             border: 1px solid var(--border);
         }
+        @media (max-height: 760px), (max-width: 900px) {
+            .toolbar { position: static; }
+        }
         .btn { padding: 4px 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; display: flex; align-items: center; gap: 4px; height: 32px; white-space: nowrap; user-select: none; }
         .btn-primary { background: var(--primary); color: white; }
         .btn-secondary { background: #6c757d; color: white; }
@@ -70,6 +73,9 @@
         .page-card.blank-card { border-style: dashed; background: rgba(0, 86, 179, 0.03); }
         .canvas-wrapper { width: 100%; aspect-ratio: 1 / 1.4; background: #f8f9fa; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 4px; position: relative; }
         .page-card canvas { max-width: 100%; max-height: 100%; transition: transform 0.3s; }
+        .page-card.rot-landscape .stamp-preview { top: 18% !important; }
+        .page-card.rot-landscape .number-preview[data-pos^="T"] { top: 18% !important; }
+        .page-card.rot-landscape .number-preview[data-pos^="B"] { bottom: 18% !important; }
         
         .number-preview { position: absolute; color: #000000 !important; background: rgba(255, 255, 255, 0.92) !important; border: 1px dashed #000000 !important; padding: 2px 4px; font-size: 11px; pointer-events: none; display: none; z-index: 20; white-space: nowrap; line-height: 1.1; }
         #zoom-number-preview { background: transparent !important; border: 1px dashed rgba(0, 0, 0, 0.5) !important; padding: 0; }
@@ -416,6 +422,7 @@
                     <div class="form-row">
                         <button type="button" class="btn btn-secondary" style="height:28px; font-size:11.5px;" onclick="extractPages()">💾 ดาวน์โหลดเฉพาะช่วงนี้</button>
                     </div>
+                    <div style="font-size:10.5px; color:#666; margin-top:4px;">* แยกเฉพาะหน้าต้นฉบับและมุมหมุน (ไม่รวมเลขหน้า/ตราประทับ)</div>
                     <hr style="border:0; border-top:1px dashed var(--border); margin:10px 0;">
                     <div class="doc-tools-card-title">
                         <span>🔢 ตั้งค่าเลขหน้าและความปลอดภัย</span>
@@ -1321,12 +1328,15 @@
         const selected = getSelectedCards();
         if (!selected.length) return;
         selected.forEach(card => {
-            card.dataset.rotation = (parseInt(card.dataset.rotation || 0) + deg) % 360;
+            const rot = (((parseInt(card.dataset.rotation || 0) + deg) % 360) + 360) % 360;
+            card.dataset.rotation = rot;
+            card.classList.toggle('rot-landscape', rot === 90 || rot === 270);
             const canvas = card.querySelector('canvas');
-            if (canvas) canvas.style.transform = `rotate(${card.dataset.rotation}deg)`;
+            if (canvas) canvas.style.transform = `rotate(${rot}deg)`;
         });
         saveHistory();
         if (isPreviewOpen) updatePreviewNumbers();
+        updateAllOverlays();
     }
 
     function batchSetPrint(enablePrint) {
@@ -1375,7 +1385,7 @@
     function saveHistory() {
         const state = getContainerSnapshot();
         historyStack.push(state);
-        if (historyStack.length > 30) historyStack.shift();
+        if (historyStack.length > 15) historyStack.shift();
         redoStack = [];
         updateHistoryButtons();
     }
@@ -1406,6 +1416,7 @@
             const card = item.card;
             setCardSelected(card, false);
             card.dataset.rotation = item.rotation;
+            card.classList.toggle('rot-landscape', item.rotation === 90 || item.rotation === 270);
             const canvas = card.querySelector('canvas');
             if (canvas) canvas.style.transform = `rotate(${item.rotation}deg)`;
             
@@ -1738,17 +1749,61 @@
         }
     }
 
+    async function normalizeImageForPdf(file) {
+        const lowerName = file.name.toLowerCase();
+        const preferPng = file.type === 'image/png' || file.type === 'image/webp' || file.type === 'image/gif' || /\.(png|webp|gif)$/i.test(lowerName);
+        const targetMime = preferPng ? 'image/png' : 'image/jpeg';
+
+        let drawable = null;
+        let width = 0;
+        let height = 0;
+        let objectUrl = null;
+
+        try {
+            if (typeof createImageBitmap === 'function') {
+                drawable = await createImageBitmap(file, { imageOrientation: 'from-image' });
+                width = drawable.width;
+                height = drawable.height;
+            } else {
+                objectUrl = URL.createObjectURL(file);
+                drawable = await new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์รูปภาพนี้ได้'));
+                    img.src = objectUrl;
+                });
+                width = drawable.naturalWidth || drawable.width;
+                height = drawable.naturalHeight || drawable.height;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            if (!preferPng) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, width, height);
+            }
+            ctx.drawImage(drawable, 0, 0, width, height);
+
+            const blob = await new Promise((resolve, reject) => {
+                canvas.toBlob(b => b ? resolve(b) : reject(new Error('แปลงไฟล์รูปภาพไม่สำเร็จ')), targetMime, 0.92);
+            });
+            return { bytes: new Uint8Array(await blob.arrayBuffer()), isPng: preferPng };
+        } finally {
+            if (drawable && typeof drawable.close === 'function') drawable.close();
+            if (objectUrl) URL.revokeObjectURL(objectUrl);
+        }
+    }
+
     async function createCardFromImageFile(file, color) {
         const { PDFDocument } = PDFLib;
         const doc = await PDFDocument.create();
-        const imgBytes = await file.arrayBuffer();
-        
-        let embeddedImg = null;
-        if (file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')) {
-            embeddedImg = await doc.embedPng(imgBytes);
-        } else {
-            embeddedImg = await doc.embedJpg(imgBytes);
-        }
+        const { bytes: imgBytes, isPng } = await normalizeImageForPdf(file);
+
+        const embeddedImg = isPng
+            ? await doc.embedPng(imgBytes)
+            : await doc.embedJpg(imgBytes);
 
         const pageW = 595.28;
         const pageH = 841.89;
@@ -1807,7 +1862,7 @@
                 }
                 const [page] = await finalPdf.copyPages(src, [card._originalIdx]);
                 const rot = parseInt(card.dataset.rotation || 0);
-                const totalRot = (page.getRotation().angle + rot) % 360;
+                const totalRot = (((page.getRotation().angle + rot) % 360) + 360) % 360;
                 page.setRotation(degrees(totalRot));
                 finalPdf.addPage(page);
             }
@@ -1868,11 +1923,14 @@
     }
 
     function rotateCard(card) {
-        card.dataset.rotation = (parseInt(card.dataset.rotation || 0) + 90) % 360;
+        const rot = (((parseInt(card.dataset.rotation || 0) + 90) % 360) + 360) % 360;
+        card.dataset.rotation = rot;
+        card.classList.toggle('rot-landscape', rot === 90 || rot === 270);
         const canvas = card.querySelector('canvas');
-        if (canvas) canvas.style.transform = `rotate(${card.dataset.rotation}deg)`;
+        if (canvas) canvas.style.transform = `rotate(${rot}deg)`;
         saveHistory();
         if(isPreviewOpen) updatePreviewNumbers();
+        updateAllOverlays();
     }
 
     function deleteCard(card) {
@@ -2152,6 +2210,7 @@
             preview.style.fontStyle = isItalic ? 'italic' : 'normal';
             preview.style.fontSize = Math.max(9, Math.round(baseFontSize * 0.35)) + 'px';
 
+            preview.dataset.pos = posType;
             preview.style.top = 'auto'; preview.style.bottom = 'auto'; preview.style.left = 'auto'; preview.style.right = 'auto'; preview.style.transform = 'none';
 
             if(posType === 'TR') { preview.style.top = (10 - oy)+'px'; preview.style.right = (10 - ox)+'px'; }
@@ -2331,9 +2390,10 @@
                         font.widthOfTextAtSize(`วันที่: ${stampDate || '........................'}`, 11),
                         font.widthOfTextAtSize(`เวลา: ${stampTime || '........................'}`, 11)
                     );
-                    const boxW = Math.max(165, Math.min(vW - 50, maxLineTw + 24));
+                    const maxBoxW = Math.max(80, vW - 20);
+                    const boxW = Math.min(maxBoxW, Math.max(165, maxLineTw + 24));
                     const boxH = 75;
-                    const marginEdge = 25;
+                    const marginEdge = Math.min(25, Math.max(8, (vW - boxW) / 2));
                     let bx = (stampPosSetting === 'TR') ? (vW - boxW - marginEdge) : marginEdge;
                     let by = vH - boxH - marginEdge;
 
